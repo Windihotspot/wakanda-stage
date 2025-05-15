@@ -320,7 +320,19 @@ const validateForm = () => {
 }
 
 const onSubmit = async () => {
-  const API_URL = `https://staging.getjupita.com/api/reset-password`
+   console.log('Submitting form...');
+    console.log('Password:', password);
+    console.log('Confirm Password:', confirmPassword);
+    console.log('Token from route:', token);
+       const payload = {
+      token: token,
+      password: password.value,
+      password_confirmation: confirmPassword.value,
+    }
+
+    console.log('Payload:', payload);
+
+  const API_URL = `https://dev02201.getjupita.com/api/reset-password`
   if (!validateForm()) {
     return
   }
@@ -328,10 +340,8 @@ const onSubmit = async () => {
   try {
     const response = await axios.post(
       API_URL,
-      {
-        password: password.value,
-        password_confirmation: confirmPassword.value
-      },
+      payload,
+      
       {
         headers: {
           Authorization: `Bearer ${token}`
@@ -347,6 +357,8 @@ const onSubmit = async () => {
     })
     router.push('/')
   } catch (error) {
+    console.error('Error Response Data:', error.data);
+      console.error('Error Response Status:', error.status);
     ElNotification({
       title: 'Error',
       message: error.response?.data?.message || 'Failed to reset password.',
