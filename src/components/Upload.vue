@@ -101,13 +101,52 @@
     </form>
 
     <!-- ConfettiSuccessModal.vue -->
-    <ConfettiSuccessModal :visible="showConfettiModal" @close="showConfettiModal = false" />
+    <div
+      v-if="showConfettiModal"
+      class="fixed inset-0 z-50 flex items-center justify-center w-full"
+    >
+      <div class="bg-white p-8 rounded-lg shadow-xl text-center relative">
+        <!-- Confetti canvas -->
+        <canvas
+          ref="confettiCanvas"
+          class="absolute top-0 left-0 w-full h-full pointer-events-none z-0"
+        ></canvas>
+
+        <!-- Success content -->
+        <div class="relative z-10 items-center justify-center">
+          <h2 class="text-xl font-bold mb-2">Success!</h2>
+          <div class="mt-8">
+            <i class="fas fa-check-circle text-green-500 text-6xl mb-4"></i>
+          </div>
+
+          <p class="text-gray-600">Your bank statement has been added successfully.</p>
+
+          <v-btn color="#1f5aa3" variant="plain" @click="$emit('close')" class="custom-btn m-4">
+            Return Home
+          </v-btn>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error Modal -->
+    <v-dialog v-model="showErrorModal" max-width="500px" persistent>
+      <template #default>
+        <div class="p-6 text-center relative bg-white rounded-lg shadow-xl">
+          <div class="text-red-500 text-6xl mb-4">
+            <v-icon size="64">mdi-alert-circle</v-icon>
+          </div>
+          <h2 class="text-xl font-bold mb-2">Upload Failed</h2>
+          <p class="text-gray-700">{{ errorMessage }}</p>
+          <v-btn color="red" variant="plain" class="mt-6 text-white custom-btn" @click="showErrorModal = false"> Close </v-btn>
+        </div>
+      </template>
+    </v-dialog>
   </div>
 </template>
 
 <script setup>
 import { ElLoading, ElNotification } from 'element-plus'
-import { ref, computed, defineProps, onMounted } from 'vue'
+import { ref, computed, defineProps, onMounted, watch, nextTick } from 'vue'
 import axios from 'axios'
 import Swal from 'sweetalert2'
 const loading = ref(false)
@@ -118,14 +157,16 @@ const tenantId = computed(() => authStore.tenant_id)
 const emit = defineEmits(['close'])
 import confetti from 'canvas-confetti'
 
-import ConfettiSuccessModal from './ConfettiSuccessModal.vue'
 const props = defineProps({
   onSuccess: Function,
   visible: Boolean
 })
 const showConfettiModal = ref(false)
+const confettiCanvas = ref(null)
 
-const uploadContainer = ref(null)
+const showErrorModal = ref(false)
+const errorMessage = ref('')
+
 
 const selectedFile = ref(null)
 const filePassword = ref('')
@@ -186,7 +227,13 @@ const uploadFile = async () => {
         ?.value
 
   if (!selectedFile.value || !statementType.value) {
-    Swal.fire('Missing Information', 'Select a statement type and file.', 'warning')
+    ElNotification({
+      title: 'No Statement type',
+      message: 'Select a statement type!',
+      type: 'warning',
+      position: 'top-right',
+      showClose: true
+    })
     return
   }
 
@@ -197,7 +244,7 @@ const uploadFile = async () => {
     formData.append('password', filePassword.value)
   }
 
-  const API_URL = `https://staging.getjupita.com/api/${tenantId}/bank-statement-analyze`
+  const API_URL = `https://dev02201.getjupita.com/api/${tenantId}/bank-statement-analyze`
 
   console.log('➡️ Uploading file...')
   for (const [key, value] of formData.entries()) {
@@ -234,52 +281,67 @@ const uploadFile = async () => {
       showClose: true
     })
 
-    // Inside uploadFile after success response
-    showConfettiModal.value = true // Show the modal
+    console.log('🎉 Showing modal')
+    setTimeout(() => {
+      showConfettiModal.value = true
+    }, 200)
 
-    // Trigger confetti animation
-    const duration = 3 * 1000
-    const end = Date.now() + duration
-
-    ;(function frame() {
-      confetti({
-        particleCount: 5,
-        spread: 500,
-        origin: { y: 0.6 }
-      })
-      if (Date.now() < end) requestAnimationFrame(frame)
-    })()
-
-    closeForm()
     // Reset input values
     selectedFile.value = null
     filePassword.value = ''
     statementType.value = ''
   } catch (error) {
-    console.error('❌ Upload error:', error)
+    console.log('❌ Upload error:', error)
+    
     ElNotification({
       title: 'Upload Failed',
       message: error.response?.data?.message || 'An error occurred during upload.',
       type: 'error',
       duration: 5000
     })
+    showErrorModal.value = true
     closeForm()
   } finally {
     loading.value = false
   }
 }
-onMounted(() => {
-  if (props.visible) {
-    // Trigger confetti once the modal is shown
-    const duration = 3 * 1000
+
+watch(showConfettiModal, async (newVal) => {
+  if (newVal) {
+    await nextTick() // Wait for dialog to render
+    const myConfetti = confetti.create(confettiCanvas.value, {
+      resize: true,
+      useWorker: true
+    })
+
+    const duration = 2 * 1000
     const end = Date.now() + duration
+    const colors = ['#1f5aa3', '#00b894', '#ffeaa7', '#fab1a0']
 
     ;(function frame() {
-      confetti({ particleCount: 5, spread: 100, origin: { y: 0.6 } })
-      if (Date.now() < end) requestAnimationFrame(frame)
+      myConfetti({
+        particleCount: 4,
+        angle: 60,
+        spread: 55,
+        origin: { x: 0 },
+        colors
+      })
+      myConfetti({
+        particleCount: 4,
+        angle: 120,
+        spread: 55,
+        origin: { x: 1 },
+        colors
+      })
+
+      if (Date.now() < end) {
+        requestAnimationFrame(frame)
+      }
     })()
   }
 })
+
+onMounted(() => {})
 </script>
 
 <style scoped>
@@ -287,7 +349,6 @@ onMounted(() => {
   display: none;
 }
 .custom-btn {
-  background-color: #1f5aa3;
   text-transform: none;
 }
 </style>

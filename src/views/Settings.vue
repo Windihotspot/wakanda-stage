@@ -108,8 +108,17 @@
                 >
               </div>
 
+              <!-- Loading Spinner -->
               <div
-                v-if="users.length === 0"
+                v-if="usersLoading"
+                class="flex flex-col items-center justify-center text-center py-20"
+              >
+                <v-progress-circular indeterminate color="primary" size="40" />
+                <p class="mt-4 text-gray-500">Loading users...</p>
+              </div>
+
+              <div
+                v-else-if="users.length === 0"
                 class="flex flex-col items-center justify-center text-center"
               >
                 <v-icon size="64" color="blue">mdi-account-multiple-outline</v-icon>
@@ -242,20 +251,18 @@ import Swal from 'sweetalert2'
 import { useAuthStore } from '@/stores/auth'
 const authStore = useAuthStore()
 const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
+const usersLoading = ref(true)
 
-console.log(savedAuth);
+console.log(savedAuth)
 
-const token = savedAuth
-  ? savedAuth?.token
-  : computed(() => authStore.token)?.value;
+const token = savedAuth ? savedAuth?.token : computed(() => authStore.token)?.value
 
 const tenantId = savedAuth
   ? savedAuth.user?.business_name
     ? savedAuth.user?.id
     : savedAuth.user?.tenant_id
-  : computed(() =>
-      authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id
-    )?.value;
+  : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
+      ?.value
 
 const user = savedAuth?.user
 
@@ -283,24 +290,26 @@ const email = ref('')
 const selectedRole = ref(null)
 
 const roles = ref([
-  { value: 'tenant', label: 'Tenant' },
-  { value: 'super_admin', label: 'Super Admin' },
-  { value: 'admin', label: 'Admin' },
-  { value: 'editor', label: 'Editor' },
-  { value: 'credit_manager', label: 'Credit Manager' },
-  { value: 'loan_manager', label: 'Loan Manager' },
-  { value: 'analysis_manager', label: 'Analysis Manager' },
-  { value: 'observer', label: 'Observer' }
+  { id: 1, value: 'tenant', label: 'Tenant' },
+  { id: 2, value: 'super_admin', label: 'Super Admin' },
+  { id: 3, value: 'admin', label: 'Admin' },
+  { id: 4, value: 'editor', label: 'Editor' },
+  { id: 5, value: 'credit_manager', label: 'Credit Manager' },
+  { id: 6, value: 'loan_manager', label: 'Loan Manager' },
+  { id: 7, value: 'analysis_manager', label: 'Analysis Manager' },
+  { id: 8, value: 'observer', label: 'Observer' }
 ])
-const getRoleLabel = (roleValue) => {
-  const found = roles.value.find((r) => r.value === roleValue)
+
+const getRoleLabelById = (roleId) => {
+  const found = roles.value.find((r) => r.id === roleId)
   return found ? found.label : 'N/A'
 }
+
 const isLoading = ref(true)
 
 const getRoles = async () => {
   try {
-    const response = await axios.get(`https://staging.getjupita.com/api/${tenantId}/get-roles`, {
+    const response = await axios.get(`https://dev02201.getjupita.com/api/${tenantId}/get-roles`, {
       headers: {
         Authorization: `Bearer ${token.value}`
       }
@@ -333,7 +342,8 @@ const newUser = ref({
 })
 
 const fetchTeam = async () => {
-  const API_URL = `https://staging.getjupita.com/api/${tenantId}/get-team`
+  usersLoading.value = true
+  const API_URL = `https://dev02201.getjupita.com/api/${tenantId}/get-team`
 
   try {
     const response = await axios.get(API_URL, {
@@ -347,16 +357,22 @@ const fetchTeam = async () => {
     // Normalize the members
     const normalized = members.map((m) => {
       const user = m.me ?? m
-      const rawRole = user.role?.title || m.role?.title
+      const roleId = user.role?.id || user.role_id || m.role?.id || null
+      const hasFullName = user.firstname && user.lastname
+
+      const name = hasFullName
+        ? `${user.firstname} ${user.lastname}`
+        : user.business_name || 'Unknown'
 
       return {
         id: user.id,
-        name: `${user.firstname} ${user.lastname}`,
+        name,
         email: user.email,
         phone: user.phone_number || 'N/A',
         status: user.active === 1 ? 'Active' : 'Inactive',
         creationDate: moment(user.created_at).format('MMMM Do YYYY, h:mm a'),
-        role: getRoleLabel(rawRole)
+        role: getRoleLabelById(roleId),
+        roleId
       }
     })
 
@@ -364,6 +380,7 @@ const fetchTeam = async () => {
   } catch (error) {
     console.error('Error fetching team data:', error)
   } finally {
+    usersLoading.value = false
   }
 }
 
@@ -393,7 +410,7 @@ const inviteUser = async () => {
     console.log('invite user request payload:', payload)
 
     const response = await axios.post(
-      `https://staging.getjupita.com/api/${tenantId}/add-member`,
+      `https://dev02201.getjupita.com/api/${tenantId}/add-member`,
       payload,
       {
         headers: {
@@ -403,7 +420,7 @@ const inviteUser = async () => {
     )
 
     console.log(response)
-
+    fetchTeam()
     ElNotification({
       title: 'Success',
       message: 'User was successfully invited.',
@@ -447,7 +464,7 @@ const updatePassword = async () => {
   try {
     console.log('new password:', profile.value.password)
     const response = await axios.put(
-      `https://staging.getjupita.com/api/${tenantId}/update-password`,
+      `https://dev02201.getjupita.com/api/${tenantId}/update-password`,
       { new_password: profile.value.password },
       {
         headers: {
@@ -501,7 +518,7 @@ const saveProfile = async () => {
       console.log('payload save profile:', payload)
 
       const response = await axios.put(
-        `https://staging.getjupita.com/api/${tenantId}/update-user-data`,
+        `https://dev02201.getjupita.com/api/${tenantId}/update-user-data`,
         payload,
         {
           headers: {
@@ -540,7 +557,7 @@ const copyToClipboard = (text) => {
 }
 
 onMounted(() => {
-  getRoleLabel()
+  getRoleLabelById()
   fetchTeam()
   console.log('User data from storage:', user)
   if (isBusiness.value) {
