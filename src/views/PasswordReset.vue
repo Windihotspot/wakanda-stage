@@ -332,7 +332,7 @@ const onSubmit = async () => {
 
     console.log('Payload:', payload);
 
-  const API_URL = `https://dev02201.getjupita.com/api/reset-password`
+  const API_URL = `https://staging.getjupita.com/api/reset-password`
   if (!validateForm()) {
     return
   }

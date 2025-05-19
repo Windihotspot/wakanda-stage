@@ -27,14 +27,14 @@ const submitForm = async () => {
   loginForm.value.errors = {} // Clear previous errors
 
   try {
-    const response = await axios.post('https://staging.getjupita.com/api/login', {
+    const response = await axios.post('https://dev02201.getjupita.com/api/login', {
       email: loginForm.value.email,
       password: loginForm.value.password
     })
 
     console.log('Login successful:', response.data)
     // Extract data from the response properly
-    const { token, user, verification_status } = response.data.data 
+    const { token, user, verification_status } = response.data.data
 
     localStorage.setItem('data', JSON.stringify(response.data.data))
 
@@ -93,16 +93,15 @@ onUnmounted(() => {
     <!-- Image Section -->
     <div class="w-full sm:w-full md:w-1/2 h-full justify-center items-center p-4">
       <!-- Logo -->
-      <div class="flex items-center  px-2">
+      <div class="flex items-center px-2">
         <img src="/src/assets/logo.png" alt="Logo" class="w-10 h-10 object-contain" />
         <span class="text-md font-semibold text-[#1F5AA3]">Jupita</span>
       </div>
       <img
-  src="/src/assets/new-logo.jpg"
-  alt="Onboarding Image"
-  class="w-full h-auto max-h-[500px] object-contain"
-/>
-
+        src="/src/assets/new-logo.jpg"
+        alt="Onboarding Image"
+        class="w-full h-full max-h-full object-contain"
+      />
     </div>
 
     <!-- Login Form Section -->
