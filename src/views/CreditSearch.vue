@@ -1,0 +1,250 @@
+<script setup>
+import { ref, computed } from 'vue'
+import MainLayout from '@/layouts/full/MainLayout.vue'
+import moment from 'moment'
+
+const statuses = ['All', 'Success', 'Failed']
+const selectedStatus = ref('All')
+const searchQuery = ref('')
+
+const showModal = ref(false)
+
+// Modal functions
+const openModal = () => {
+  showModal.value = true
+}
+
+const closeModal = () => {
+  showModal.value = false
+}
+
+const creditStatements = ref([
+  {
+    id: '224355667829',
+    created_date: '2024-11-16',
+    report_type: 'Individual',
+    bureau_name: 'CRC',
+    status: 'Success'
+  },
+  {
+    id: '223564748855',
+    created_date: '2024-11-16',
+    report_type: 'Individual',
+    bureau_name: 'CRC, FCB',
+    status: 'Success'
+  },
+  {
+    id: '223345667788',
+    created_date: '2024-11-16',
+    report_type: 'Individual',
+    bureau_name: 'CRC, Credit Registry',
+    status: 'Success'
+  },
+  {
+    id: '345678877776',
+    created_date: '2024-11-16',
+    report_type: 'Individual',
+    bureau_name: 'CRC, Credit Registry, FCB',
+    status: 'Success'
+  },
+  {
+    id: 'ESPORTA HOTEL AND SUITES',
+    created_date: '2024-11-16',
+    report_type: 'Commercial',
+    bureau_name: 'CRC, Credit Registry, FCB',
+    status: 'Failed'
+  },
+  {
+    id: 'JUPITA BANK LIMITED',
+    created_date: '2024-11-16',
+    report_type: 'Commercial',
+    bureau_name: 'CRC, Credit Registry, FCB',
+    status: 'Success'
+  },
+  {
+    id: 'SEAMLESSHR LIMITED',
+    created_date: '2024-11-16',
+    report_type: 'Commercial',
+    bureau_name: 'CRC, Credit Registry, FCB',
+    status: 'Success'
+  },
+  {
+    id: 'LINKS MICROFINANCE BANK',
+    created_date: '2024-11-16',
+    report_type: 'Commercial',
+    bureau_name: 'CRC, Credit Registry, FCB',
+    status: 'Success'
+  },
+  {
+    id: 'SHARA TECHNOLOGY LTD',
+    created_date: '2024-11-16',
+    report_type: 'Commercial',
+    bureau_name: 'CRC, Credit Registry, FCB',
+    status: 'Failed'
+  },
+  {
+    id: '22334455667',
+    created_date: '2024-11-16',
+    report_type: 'Individual',
+    bureau_name: 'CRC, Credit Registry, FCB',
+    status: 'Success'
+  }
+])
+
+const isLoading = ref(false)
+
+// Computed filtered list based on selectedStatus and searchQuery
+const filteredCreditStatements = computed(() => {
+  return creditStatements.value.filter((credit) => {
+    const matchesStatus = selectedStatus.value === 'All' || credit.status === selectedStatus.value
+    const matchesSearch =
+      searchQuery.value === '' ||
+      credit.id.toString().toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+      credit.report_type.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+      credit.bureau_name.toLowerCase().includes(searchQuery.value.toLowerCase())
+
+    return matchesStatus && matchesSearch
+  })
+})
+</script>
+
+<template>
+  <MainLayout>
+    <div class="p-4 rounded shadow-sm bg-white m-4">
+      <!-- Header with Title and New credit search Button -->
+      <div class="bg-white flex justify-between items-center border-b p-2">
+        <div class="mb-2">
+          <h1 class="text-2xl font-bold text-gray-900">Credit Search</h1>
+          <p class="text-gray-500 text-sm mt-1">View and Manage your credit search</p>
+        </div>
+
+        <v-btn
+          @click="openModal"
+          size="medium"
+          class="normal-case custom-btn hover:bg-blue-700 text-white text-sm font-semibold px-6 py-3 rounded-md shadow-md"
+        >
+          <span
+            class="bg-white text-blue-600 rounded-full p-1 flex items-center justify-center w-4 h-4 mr-2"
+          >
+            <i class="fa-solid fa-plus text-sm text-[#1f5aa3]"></i>
+          </span>
+          New Credit Search
+        </v-btn>
+      </div>
+
+      <div class="flex items-center justify-between p-2">
+        <!-- Filter (Vuetify Select) -->
+        <div class="flex items-center space-x-2 pt-2">
+          <!-- Filter Icon -->
+          <i class="fa-solid fa-filter"></i>
+
+          <v-select
+            color="#1f5aa3"
+            v-model="selectedStatus"
+            :items="statuses"
+            label="Status"
+            density="compact"
+            hide-details
+            variant="outlined"
+            class="w-32"
+          ></v-select>
+        </div>
+
+        <v-text-field
+          rounded
+          v-model="searchQuery"
+          placeholder="Search for a credit statement"
+          density="compact"
+          hide-details
+          variant="outlined"
+          class="max-w-xs rounded-md"
+          label="Search"
+          color="#1f5aa3"
+          append-inner-icon=""
+        >
+          <!-- FontAwesome Search Icon inside append-inner slot -->
+          <template #append-inner>
+            <i class="fas fa-search text-[#1f5aa3]"></i>
+          </template>
+        </v-text-field>
+      </div>
+    </div>
+
+    <div class="p-4">
+      <div v-if="isLoading" class="flex flex-col items-center justify-center min-h-[200px]">
+        <v-progress-circular indeterminate color="#1f5aa3" size="80" width="8" />
+        <span class="mt-2 text-gray-600 text-sm">Loading credit statements...</span>
+      </div>
+
+      <div v-else-if="creditStatements.length > 0" class="overflow-x-auto">
+        <table class="min-w-full">
+          <thead class="font-semibold uppercase text-sm leading-normal">
+            <tr>
+              <th class="py-3 px-6 text-left">S/N</th>
+              <th class="py-3 px-6 text-left">ID</th>
+              <th class="py-3 px-6 text-left">Created Date</th>
+              <th class="py-3 px-6 text-left">Report Type</th>
+              <th class="py-3 px-6 text-left">Bureau Name</th>
+              <th class="py-3 px-6 text-left">Status</th>
+              <th class="py-3 px-6 text-center">Action</th>
+            </tr>
+          </thead>
+          <tbody class="text-gray-700 text-sm font-light bg-white rounded-xl shadow-lg">
+            <tr
+              v-for="(credit, index) in filteredCreditStatements"
+              :key="credit.id"
+              class="border-b border-gray-200 font-normal"
+            >
+              <td class="py-3 px-6 text-left">{{ index + 1 }}</td>
+
+              <td class="py-3 px-6">{{ credit.id }}</td>
+              <td class="py-3 px-6">{{ moment(credit.created_date).format('MMMM Do, YYYY') }}</td>
+              <td class="py-3 px-6">{{ credit.report_type }}</td>
+              <td class="py-3 px-6">{{ credit.bureau_name }}</td>
+              <td class="py-3 px-6">
+                <span
+                  :class="
+                    credit.status === 'Success'
+                      ? 'text-green-600 py-1 px-2 text-xs font-semibold rounded-full bg-green-100'
+                      : 'text-red-600 py-1 px-2 text-xs font-semibold rounded-full bg-red-100'
+                  "
+                >
+                  {{ credit.status }}
+                </span>
+              </td>
+              <td class="py-3 px-6 text-center">
+                <span
+                  class="bg-[#1f5aa3] text-white px-4 py-1 rounded hover:bg-blue-600 cursor-pointer"
+                >
+                  View
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div v-else class="fill-height align-center justify-center">
+        <div class="mx-auto text-center align-center w-[200px] h-[200px]">
+          <img src="/src/assets/images/no-data.png" alt="No Data" />
+          <div class="empty-text font-semibold mt-8">No credit statements</div>
+        </div>
+      </div>
+    </div>
+
+    <v-dialog v-model="showModal" persistent max-width="600px" class="pa-4">
+      <template v-slot:default="{ close }">
+        <div style="max-height: 80vh; overflow-y: auto">
+          <!-- <CreditModal @close="closeModal" /> -->
+        </div>
+      </template>
+    </v-dialog>
+  </MainLayout>
+</template>
+
+<style scoped>
+.custom-btn {
+  text-transform: none;
+  background-color: #1f5aa3;
+}
+</style>
