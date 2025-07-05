@@ -60,6 +60,17 @@ const router = createRouter({
       component: PasswordReset
     },
     {
+      path: '/credit-search',
+      name: 'credit-search',
+      component: CreditSearch
+    }
+  ,
+    {
+      path: '/credit-report',
+      name: 'credit-report',
+      component: CreditReport
+    }
+    {
       path: '/statement-analysis/:id',
       name: 'StatementAnalysis',
       component: () => import('@/views/StatementAnalysis.vue'),

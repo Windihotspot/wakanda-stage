@@ -345,15 +345,15 @@ const tenantId = savedAuth
 
   const loading = ref(false)
 
-  if (!amount.value || amount.value < 100000) {
-    ElNotification({
-      title: 'Invalid Amount',
-      message: 'Minimum funding amount is ₦100,000.',
-      type: 'warning',
-      duration: 4000
-    })
-    return
-  }
+  // if (!amount.value || amount.value < 100000) {
+  //   ElNotification({
+  //     title: 'Invalid Amount',
+  //     message: 'Minimum funding amount is ₦100,000.',
+  //     type: 'warning',
+  //     duration: 4000
+  //   })
+  //   return
+  // }
 
   const API_URL = `https://staging.getjupita.com/api/${tenantId}/initialize-payment`
   console.log('fund wallet amount:', amount.value)

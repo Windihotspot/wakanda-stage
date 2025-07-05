@@ -22,7 +22,7 @@ const logout = async () => {
 
   try {
     const response = await axios.post(
-      `https://staging.getjupita.com/api/${tenantId}/logout`,
+      `https://dev02201.getjupita.com/api/${tenantId}/logout`,
       {},
       {
         headers: {
