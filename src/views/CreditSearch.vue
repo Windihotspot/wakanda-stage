@@ -1,7 +1,8 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import MainLayout from '@/layouts/full/MainLayout.vue'
 import moment from 'moment'
+import Axios from 'axios'
 
 const statuses = ['All', 'Success', 'Failed']
 const selectedStatus = ref('All')
@@ -105,6 +106,119 @@ const filteredCreditStatements = computed(() => {
 
     return matchesStatus && matchesSearch
   })
+})
+
+const activeTab = ref('individual')
+
+// Individual
+const enquiryReasonIndividual = ref('')
+const bvnIndividual = ref('')
+const consentIndividual = ref(false)
+const reportOptionsIndividual = ref([
+  { label: 'First Central', value: 'first_central', checked: true },
+  { label: 'Credit Registry', value: 'credit_registry', checked: true },
+  { label: 'CRC', value: 'crc', checked: true }
+])
+
+// Company
+const enquiryReasonCompany = ref('')
+const rcNumber = ref('')
+const businessName = ref('')
+const consentCompany = ref(false)
+const reportOptionsCompany = ref([
+  { label: 'First Central', value: 'first_central', checked: true },
+  { label: 'Credit Registry', value: 'credit_registry', checked: true },
+  { label: 'CRC', value: 'crc', checked: true }
+])
+
+const submitCompanyForm = () => {
+  closeModal()
+}
+
+const fetchCreditChecks = async () => {
+  const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
+
+  console.log(savedAuth)
+
+  const token = savedAuth ? savedAuth?.token : computed(() => authStore.token)?.value
+
+  const tenantId = savedAuth
+    ? savedAuth.user?.business_name
+      ? savedAuth.user?.id
+      : savedAuth.user?.tenant_id
+    : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
+        ?.value
+
+  const API_URL = `https://staging.getjupita.com/api/${tenantId}/fetch-existing-credit-checks`
+  isLoading.value = true
+
+  try {
+    const response = await Axios.get(API_URL, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    })
+    console.log('fetch credit checks response:', response)
+    console.log('fetch credit checks data:', response.data.data.credit_checks.data)
+  } catch (error) {
+    console.error('Error fetching credit checks:', error)
+    statements.value = []
+  } finally {
+    isLoading.value = false
+  }
+}
+
+const submitIndividualForm = async () => {
+   const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
+
+  console.log(savedAuth)
+
+  const token = savedAuth ? savedAuth?.token : computed(() => authStore.token)?.value
+
+  const borrower_id = savedAuth
+    ? savedAuth.user?.business_name
+      ? savedAuth.user?.id
+      : savedAuth.user?.tenant_id
+    : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
+        ?.value
+ 
+
+  // Create query parameters
+  const params = new URLSearchParams({
+    id_type: 'individual',
+    id_string: bvnIndividual.value,
+    purpose: enquiryReasonIndividual.value,
+    refresh: 'false',
+    borrower_id: borrower_id,
+     'services[]': 'fcbc'
+  })
+
+  
+
+  const API_URL = `https://staging.getjupita.com/api/${borrower_id}/check-credit-history?${params.toString()}`
+
+  try {
+    isLoading.value = true
+    const response = await Axios.get(API_URL, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    })
+
+    console.log('Credit check response:', response.data)
+    closeModal()
+    fetchCreditChecks() // Refresh credit checks
+  } catch (error) {
+    console.error('Error running individual credit check:', error)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+
+
+onMounted(() => {
+  fetchCreditChecks()
 })
 </script>
 
@@ -232,10 +346,166 @@ const filteredCreditStatements = computed(() => {
       </div>
     </div>
 
-    <v-dialog v-model="showModal" persistent max-width="600px" class="pa-4">
-      <template v-slot:default="{ close }">
-        <div style="max-height: 80vh; overflow-y: auto">
-          <!-- <CreditModal @close="closeModal" /> -->
+    <!-- Credit Search Modal -->
+    <v-dialog v-model="showModal" persistent max-width="800px">
+      <template #default>
+        <div class="max-w-3xl mx-auto p-6 bg-white shadow-lg rounded-lg">
+          <div class="p-6 space-y-6">
+            <!-- Tabs -->
+            <div class="flex space-x-4">
+              <button
+                @click="activeTab = 'individual'"
+                :class="
+                  activeTab === 'individual'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 text-gray-700'
+                "
+                class="px-4 py-2 rounded transition"
+              >
+                Individual
+              </button>
+              <button
+                @click="activeTab = 'company'"
+                :class="
+                  activeTab === 'company' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'
+                "
+                class="px-4 py-2 rounded transition"
+              >
+                Company
+              </button>
+            </div>
+
+            <!-- Tab content transition -->
+            <transition name="fade" mode="out-in">
+              <div :key="activeTab">
+                <!-- Individual Form -->
+                <div v-if="activeTab === 'individual'" class="space-y-4">
+                  <h2 class="text-lg font-semibold">Individual Credit Search</h2>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label class="block text-sm font-medium mb-1">Enquiry Reason</label>
+                      <select
+                        v-model="enquiryReasonIndividual"
+                        required
+                        class="w-full border rounded px-3 py-2"
+                      >
+                        <option value="" disabled>Select enquiry reason</option>
+                        <option>Employment</option>
+                        <option>Loan Application</option>
+                        <option>Background Check</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium mb-1">Bank Verification Number</label>
+                      <input
+                        v-model="bvnIndividual"
+                        type="text"
+                        required
+                        class="w-full border rounded px-3 py-2"
+                        placeholder="Enter BVN"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="flex space-x-6">
+                    <div
+                      v-for="(option, index) in reportOptionsIndividual"
+                      :key="index"
+                      class="flex items-center space-x-2"
+                    >
+                      <input type="checkbox" v-model="option.checked" />
+                      <label>{{ option.label }}</label>
+                    </div>
+                  </div>
+
+                  <div class="bg-red-100 text-red-800 p-4 rounded flex items-start space-x-2">
+                    <input type="checkbox" v-model="consentIndividual" />
+                    <p class="text-sm">
+                      By clicking on “Search Report”, you acknowledge that you have gotten consent
+                      from the data subject to use their data for verification purpose.
+                    </p>
+                  </div>
+
+                  <button
+                    @click="submitIndividualForm"
+                    class="w-full bg-blue-600 text-white py-3 rounded disabled:opacity-50"
+                    :disabled="!consentIndividual"
+                  >
+                    Generate Report
+                  </button>
+                </div>
+
+                <!-- Company Form -->
+                <div v-else-if="activeTab === 'company'" class="space-y-4">
+                  <h2 class="text-lg font-semibold">Company Credit Search</h2>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label class="block text-sm font-medium mb-1">Enquiry Reason</label>
+                      <select
+                        v-model="enquiryReasonCompany"
+                        required
+                        class="w-full border rounded px-3 py-2"
+                      >
+                        <option value="" disabled>Select enquiry reason</option>
+                        <option>Supplier Verification</option>
+                        <option>Partnership Review</option>
+                        <option>Credit Assessment</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium mb-1">Business Name</label>
+                      <input
+                        v-model="businessName"
+                        type="text"
+                        required
+                        class="w-full border rounded px-3 py-2"
+                        placeholder="Enter Business name"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium mb-1"
+                        >Business Registration Number</label
+                      >
+                      <input
+                        v-model="rcNumber"
+                        type="text"
+                        required
+                        class="w-full border rounded px-3 py-2"
+                        placeholder="Enter business number"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="flex space-x-6">
+                    <div
+                      v-for="(option, index) in reportOptionsCompany"
+                      :key="index"
+                      class="flex items-center space-x-2"
+                    >
+                      <input type="checkbox" v-model="option.checked" />
+                      <label>{{ option.label }}</label>
+                    </div>
+                  </div>
+
+                  <div class="bg-red-100 text-red-800 p-4 rounded flex items-start space-x-2">
+                    <input type="checkbox" v-model="consentCompany" />
+                    <p class="text-sm">
+                      By clicking on “Search Report”, you acknowledge that you have gotten consent
+                      from the data subject to use their data for verification purpose.
+                    </p>
+                  </div>
+
+                  <button
+                    @click="submitCompanyForm"
+                    class="w-full bg-blue-600 text-white py-3 rounded disabled:opacity-50"
+                    :disabled="!consentCompany"
+                  >
+                    Generate Report
+                  </button>
+                </div>
+              </div>
+            </transition>
+          </div>
         </div>
       </template>
     </v-dialog>

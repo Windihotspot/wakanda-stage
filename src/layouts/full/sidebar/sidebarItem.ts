@@ -4,11 +4,11 @@ export default [
     icon: 'fa-solid fa-chart-area', 
     path: '/dashboard'
   },
-  // {
-  //   title: 'Credit Search',
-  //   icon: 'fa-solid fa-chart-line', 
-  //   path: '/credit-search'
-  // },
+  {
+    title: 'Credit Search',
+    icon: 'fa-solid fa-chart-line', 
+    path: '/credit-search'
+  },
   {
     title: 'Wallet',
     icon: 'fa-solid fa-wallet', 
