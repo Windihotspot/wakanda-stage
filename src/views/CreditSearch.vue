@@ -20,76 +20,76 @@ const closeModal = () => {
 }
 
 const creditStatements = ref([
-  {
-    id: '224355667829',
-    created_date: '2024-11-16',
-    report_type: 'Individual',
-    bureau_name: 'CRC',
-    status: 'Success'
-  },
-  {
-    id: '223564748855',
-    created_date: '2024-11-16',
-    report_type: 'Individual',
-    bureau_name: 'CRC, FCB',
-    status: 'Success'
-  },
-  {
-    id: '223345667788',
-    created_date: '2024-11-16',
-    report_type: 'Individual',
-    bureau_name: 'CRC, Credit Registry',
-    status: 'Success'
-  },
-  {
-    id: '345678877776',
-    created_date: '2024-11-16',
-    report_type: 'Individual',
-    bureau_name: 'CRC, Credit Registry, FCB',
-    status: 'Success'
-  },
-  {
-    id: 'ESPORTA HOTEL AND SUITES',
-    created_date: '2024-11-16',
-    report_type: 'Commercial',
-    bureau_name: 'CRC, Credit Registry, FCB',
-    status: 'Failed'
-  },
-  {
-    id: 'JUPITA BANK LIMITED',
-    created_date: '2024-11-16',
-    report_type: 'Commercial',
-    bureau_name: 'CRC, Credit Registry, FCB',
-    status: 'Success'
-  },
-  {
-    id: 'SEAMLESSHR LIMITED',
-    created_date: '2024-11-16',
-    report_type: 'Commercial',
-    bureau_name: 'CRC, Credit Registry, FCB',
-    status: 'Success'
-  },
-  {
-    id: 'LINKS MICROFINANCE BANK',
-    created_date: '2024-11-16',
-    report_type: 'Commercial',
-    bureau_name: 'CRC, Credit Registry, FCB',
-    status: 'Success'
-  },
-  {
-    id: 'SHARA TECHNOLOGY LTD',
-    created_date: '2024-11-16',
-    report_type: 'Commercial',
-    bureau_name: 'CRC, Credit Registry, FCB',
-    status: 'Failed'
-  },
-  {
-    id: '22334455667',
-    created_date: '2024-11-16',
-    report_type: 'Individual',
-    bureau_name: 'CRC, Credit Registry, FCB',
-    status: 'Success'
-  }
+  //   {
+  //     id: '224355667829',
+  //     created_date: '2024-11-16',
+  //     report_type: 'Individual',
+  //     bureau_name: 'CRC',
+  //     status: 'Success'
+  //   },
+  //   {
+  //     id: '223564748855',
+  //     created_date: '2024-11-16',
+  //     report_type: 'Individual',
+  //     bureau_name: 'CRC, FCB',
+  //     status: 'Success'
+  //   },
+  //   {
+  //     id: '223345667788',
+  //     created_date: '2024-11-16',
+  //     report_type: 'Individual',
+  //     bureau_name: 'CRC, Credit Registry',
+  //     status: 'Success'
+  //   },
+  //   {
+  //     id: '345678877776',
+  //     created_date: '2024-11-16',
+  //     report_type: 'Individual',
+  //     bureau_name: 'CRC, Credit Registry, FCB',
+  //     status: 'Success'
+  //   },
+  //   {
+  //     id: 'ESPORTA HOTEL AND SUITES',
+  //     created_date: '2024-11-16',
+  //     report_type: 'Commercial',
+  //     bureau_name: 'CRC, Credit Registry, FCB',
+  //     status: 'Failed'
+  //   },
+  //   {
+  //     id: 'JUPITA BANK LIMITED',
+  //     created_date: '2024-11-16',
+  //     report_type: 'Commercial',
+  //     bureau_name: 'CRC, Credit Registry, FCB',
+  //     status: 'Success'
+  //   },
+  //   {
+  //     id: 'SEAMLESSHR LIMITED',
+  //     created_date: '2024-11-16',
+  //     report_type: 'Commercial',
+  //     bureau_name: 'CRC, Credit Registry, FCB',
+  //     status: 'Success'
+  //   },
+  //   {
+  //     id: 'LINKS MICROFINANCE BANK',
+  //     created_date: '2024-11-16',
+  //     report_type: 'Commercial',
+  //     bureau_name: 'CRC, Credit Registry, FCB',
+  //     status: 'Success'
+  //   },
+  //   {
+  //     id: 'SHARA TECHNOLOGY LTD',
+  //     created_date: '2024-11-16',
+  //     report_type: 'Commercial',
+  //     bureau_name: 'CRC, Credit Registry, FCB',
+  //     status: 'Failed'
+  //   },
+  //   {
+  //     id: '22334455667',
+  //     created_date: '2024-11-16',
+  //     report_type: 'Individual',
+  //     bureau_name: 'CRC, Credit Registry, FCB',
+  //     status: 'Success'
+  //   }
 ])
 
 const isLoading = ref(false)
@@ -159,7 +159,8 @@ const fetchCreditChecks = async () => {
       }
     })
     console.log('fetch credit checks response:', response)
-    console.log('fetch credit checks data:', response.data.data.credit_checks.data)
+    creditStatements.value = response.data.data.credit_checks.data
+    console.log('fetch credit checks data:', creditStatements.value)
   } catch (error) {
     console.error('Error fetching credit checks:', error)
     statements.value = []
@@ -169,7 +170,7 @@ const fetchCreditChecks = async () => {
 }
 
 const submitIndividualForm = async () => {
-   const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
+  const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
 
   console.log(savedAuth)
 
@@ -181,19 +182,17 @@ const submitIndividualForm = async () => {
       : savedAuth.user?.tenant_id
     : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
         ?.value
- 
 
   // Create query parameters
   const params = new URLSearchParams({
     id_type: 'individual',
     id_string: bvnIndividual.value,
     purpose: enquiryReasonIndividual.value,
-    refresh: 'false',
-    borrower_id: borrower_id,
-     'services[]': 'fcbc'
+    refresh: false,
+    'services[]': 'fcbc'
   })
 
-  
+  console.log('run credit checks request:', params)
 
   const API_URL = `https://staging.getjupita.com/api/${borrower_id}/check-credit-history?${params.toString()}`
 
@@ -215,8 +214,6 @@ const submitIndividualForm = async () => {
   }
 }
 
-
-
 onMounted(() => {
   fetchCreditChecks()
 })
@@ -228,7 +225,7 @@ onMounted(() => {
       <!-- Header with Title and New credit search Button -->
       <div class="bg-white flex justify-between items-center border-b p-2">
         <div class="mb-2">
-          <h1 class="text-2xl font-bold text-gray-900">Credit Search</h1>
+          <h1 class="text-xl font-bold">Credit Search</h1>
           <p class="text-gray-500 text-sm mt-1">View and Manage your credit search</p>
         </div>
 
@@ -341,7 +338,7 @@ onMounted(() => {
       <div v-else class="fill-height align-center justify-center">
         <div class="mx-auto text-center align-center w-[200px] h-[200px]">
           <img src="/src/assets/images/no-data.png" alt="No Data" />
-          <div class="empty-text font-semibold mt-8">No credit statements</div>
+          <div class="empty-text font-normal mt-8">No credit checks</div>
         </div>
       </div>
     </div>
@@ -350,6 +347,13 @@ onMounted(() => {
     <v-dialog v-model="showModal" persistent max-width="800px">
       <template #default>
         <div class="max-w-3xl mx-auto p-6 bg-white shadow-lg rounded-lg">
+          <!-- Close icon positioned absolutely -->
+          <button
+            @click="showModal = false"
+            class="absolute top-4 right-4 text-gray-600 hover:text-red-500 mr-6"
+          >
+            <i class="fas fa-times cursor-pointer fa-lg"></i>
+          </button>
           <div class="p-6 space-y-6">
             <!-- Tabs -->
             <div class="flex space-x-4">
@@ -382,45 +386,46 @@ onMounted(() => {
                 <div v-if="activeTab === 'individual'" class="space-y-4">
                   <h2 class="text-lg font-semibold">Individual Credit Search</h2>
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label class="block text-sm font-medium mb-1">Enquiry Reason</label>
-                      <select
-                        v-model="enquiryReasonIndividual"
-                        required
-                        class="w-full border rounded px-3 py-2"
-                      >
-                        <option value="" disabled>Select enquiry reason</option>
-                        <option>Employment</option>
-                        <option>Loan Application</option>
-                        <option>Background Check</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label class="block text-sm font-medium mb-1">Bank Verification Number</label>
-                      <input
-                        v-model="bvnIndividual"
-                        type="text"
-                        required
-                        class="w-full border rounded px-3 py-2"
-                        placeholder="Enter BVN"
-                      />
-                    </div>
+                    <v-select
+                      variant="outlined"
+                      color="#1f5aa3"
+                      v-model="enquiryReasonIndividual"
+                      :items="['Employment', 'Loan Application', 'Background Check']"
+                      label="Enquiry Reason"
+                      placeholder="Choose reason for enquiry"
+                      required
+                      outlined
+                      dense
+                      return-object
+                      :menu-props="{ maxHeight: '200' }"
+                    ></v-select>
+
+                    <v-text-field
+                      variant="outlined"
+                      color="#1f5aa3"
+                      v-model="bvnIndividual"
+                      label="Bank Verification Number"
+                      placeholder="Enter BVN"
+                      required
+                      outlined
+                      dense
+                    ></v-text-field>
                   </div>
 
-                  <div class="flex space-x-6">
-                    <div
+                  <div class="flex flex-wrap gap-6">
+                    <el-checkbox
                       v-for="(option, index) in reportOptionsIndividual"
                       :key="index"
-                      class="flex items-center space-x-2"
-                    >
-                      <input type="checkbox" v-model="option.checked" />
-                      <label>{{ option.label }}</label>
-                    </div>
+                      v-model="option.checked"
+                      :label="option.label"
+                      class="custom-checkbox"
+                    />
                   </div>
 
+                  <!-- Consent Checkbox -->
                   <div class="bg-red-100 text-red-800 p-4 rounded flex items-start space-x-2">
-                    <input type="checkbox" v-model="consentIndividual" />
-                    <p class="text-sm">
+                    <el-checkbox v-model="consentIndividual" class="custom-checkbox" />
+                    <p class="text-md mt-1">
                       By clicking on “Search Report”, you acknowledge that you have gotten consent
                       from the data subject to use their data for verification purpose.
                     </p>
@@ -439,57 +444,58 @@ onMounted(() => {
                 <div v-else-if="activeTab === 'company'" class="space-y-4">
                   <h2 class="text-lg font-semibold">Company Credit Search</h2>
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label class="block text-sm font-medium mb-1">Enquiry Reason</label>
-                      <select
-                        v-model="enquiryReasonCompany"
-                        required
-                        class="w-full border rounded px-3 py-2"
-                      >
-                        <option value="" disabled>Select enquiry reason</option>
-                        <option>Supplier Verification</option>
-                        <option>Partnership Review</option>
-                        <option>Credit Assessment</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label class="block text-sm font-medium mb-1">Business Name</label>
-                      <input
-                        v-model="businessName"
-                        type="text"
-                        required
-                        class="w-full border rounded px-3 py-2"
-                        placeholder="Enter Business name"
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-sm font-medium mb-1"
-                        >Business Registration Number</label
-                      >
-                      <input
-                        v-model="rcNumber"
-                        type="text"
-                        required
-                        class="w-full border rounded px-3 py-2"
-                        placeholder="Enter business number"
-                      />
-                    </div>
-                  </div>
+    <!-- Enquiry Reason -->
+    <v-select
+      v-model="enquiryReasonCompany"
+      :items="[
+        'Supplier Verification',
+        'Partnership Review',
+        'Credit Assessment'
+      ]"
+      label="Enquiry Reason"
+      placeholder="Select enquiry reason"
+      variant="outlined"
+      color="#1f5aa3"
+      density="comfortable"
+      required
+    ></v-select>
 
-                  <div class="flex space-x-6">
-                    <div
+    <!-- Business Name -->
+    <v-text-field
+      v-model="businessName"
+      label="Business Name"
+      placeholder="Enter Business name"
+      variant="outlined"
+      color="#1f5aa3"
+      density="comfortable"
+      required
+    ></v-text-field>
+
+    <!-- Business Registration Number -->
+    <v-text-field
+      v-model="rcNumber"
+      label="Business Registration Number"
+      placeholder="Enter business number"
+      variant="outlined"
+      color="#1f5aa3"
+      density="comfortable"
+      required
+    ></v-text-field>
+  </div>
+                  <div class="flex flex-wrap gap-6">
+                    <el-checkbox
                       v-for="(option, index) in reportOptionsCompany"
                       :key="index"
-                      class="flex items-center space-x-2"
-                    >
-                      <input type="checkbox" v-model="option.checked" />
-                      <label>{{ option.label }}</label>
-                    </div>
+                      v-model="option.checked"
+                      :label="option.label"
+                      class="custom-checkbox"
+                    />
                   </div>
 
+                  <!-- Consent Checkbox -->
                   <div class="bg-red-100 text-red-800 p-4 rounded flex items-start space-x-2">
-                    <input type="checkbox" v-model="consentCompany" />
-                    <p class="text-sm">
+                    <el-checkbox v-model="consentCompany" class="custom-checkbox" />
+                    <p class="text-md mt-1">
                       By clicking on “Search Report”, you acknowledge that you have gotten consent
                       from the data subject to use their data for verification purpose.
                     </p>
@@ -517,4 +523,11 @@ onMounted(() => {
   text-transform: none;
   background-color: #1f5aa3;
 }
+/* Customize tick/checkmark color for Element Plus checkboxes */
+.custom-checkbox >>> .el-checkbox__input.is-checked .el-checkbox__inner {
+  background-color: #22c55e !important; /* Tailwind's green-500 */
+  border-color: #22c55e !important;
+}
+
+
 </style>

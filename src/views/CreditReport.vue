@@ -225,103 +225,164 @@ const inquiryHistory = [
 
 <template>
   <MainLayout>
-    <div class="p-6 bg-white rounded shadow-sm max-w-5xl mx-auto space-y-6">
+    <div class="flex justify-between items-center p-2">
       <!-- Tabs -->
       <div class="flex space-x-4">
         <button
           v-for="tab in tabs"
           :key="tab.key"
           @click="activeTab = tab.key"
-          :class="activeTab === tab.key ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'"
-          class="px-4 py-2 rounded transition"
+          :class="activeTab === tab.key ? 'bg-blue-600 text-white' : 'bg-white text-black'"
+          class="px-4 py-2 rounded transition text-sm"
         >
           {{ tab.label }}
         </button>
-        <button class="ml-auto bg-blue-600 text-white px-4 py-2 rounded">Export PDF</button>
       </div>
 
+      <!-- Export Button aligned to the right -->
+      <div>
+        <v-btn
+          no-uppercase
+          size="small"
+          class="normal-case p-4 bg-blue-600 hover:bg-blue-700 text-white text-none custom-btn"
+        >
+          <i class="fas fa-download mr-2"></i>
+          Export PDF
+        </v-btn>
+      </div>
+    </div>
+
+    <div class="mt-4 p-2 max-w-5xl mx-auto space-y-6">
       <!-- Tab Content Transition -->
       <transition name="fade" mode="out-in">
         <div :key="activeTab" class="space-y-6">
           <template v-if="activeTab === 'first_central'">
             <!-- Only showing the same data for all tabs, you can customize per tab if needed -->
-            <div class="bg-gray-50 p-6 rounded space-y-4">
-              <h2 class="text-lg font-semibold mb-4">Personal details summary</h2>
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-700">
-                <div><strong>Last Name:</strong> {{ reportData.personal.lastName }}</div>
-                <div><strong>Gender:</strong> {{ reportData.personal.gender }}</div>
-                <div><strong>Phone Number:</strong> {{ reportData.personal.phone }}</div>
+            <div class="bg-white p-6 rounded space-y-4">
+              <h2 class="text-md font-semibold mb-4">Personal details summary</h2>
+              <div
+                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-6 gap-x-8 text-sm text-gray-600"
+              >
+                <!-- Column 1 -->
+                <div>
+                  <p class="mb-1">Last Name</p>
+                  <p class="font-bold text-gray-900">{{ reportData.personal.lastName }}</p>
+                </div>
+                <div>
+                  <p class="mb-1">Gender</p>
+                  <p class="font-bold text-gray-900">{{ reportData.personal.gender }}</p>
+                </div>
+                <div>
+                  <p class="mb-1">Phone Number</p>
+                  <p class="font-bold text-gray-900">{{ reportData.personal.phone }}</p>
+                </div>
+                <div>
+                  <p class="mb-1">Latest Residential Address</p>
+                  <p class="font-bold text-gray-900 leading-snug">
+                    {{ reportData.personal.address }}
+                  </p>
+                </div>
 
-                <div><strong>First Name:</strong> {{ reportData.personal.firstName }}</div>
-                <div><strong>Bank Verification Number:</strong> {{ reportData.personal.bvn }}</div>
-                <div><strong>Work Telephone:</strong> {{ reportData.personal.workPhone }}</div>
+                <!-- Column 2 -->
+                <div>
+                  <p class="mb-1">First Name</p>
+                  <p class="font-bold text-gray-900">{{ reportData.personal.firstName }}</p>
+                </div>
+                <div>
+                  <p class="mb-1">Bank Verification Number</p>
+                  <p class="font-bold text-gray-900">{{ reportData.personal.bvn }}</p>
+                </div>
+                <div>
+                  <p class="mb-1">Work Telephone</p>
+                  <p class="font-bold text-gray-900">{{ reportData.personal.workPhone }}</p>
+                </div>
 
-                <div><strong>Other Names:</strong> {{ reportData.personal.otherNames }}</div>
-                <div><strong>Date of Birth:</strong> {{ reportData.personal.dob }}</div>
-                <div><strong>Home Telephone:</strong> {{ reportData.personal.homePhone }}</div>
-
-                <div class="md:col-span-3">
-                  <strong>Latest Residential Address:</strong> {{ reportData.personal.address }}
+                <!-- Column 3 -->
+                <div>
+                  <p class="mb-1">Other Names</p>
+                  <p class="font-bold text-gray-900">{{ reportData.personal.otherNames }}</p>
+                </div>
+                <div>
+                  <p class="mb-1">Date of Birth</p>
+                  <p class="font-bold text-gray-900">{{ reportData.personal.dob }}</p>
+                </div>
+                <div>
+                  <p class="mb-1">Home Telephone</p>
+                  <p class="font-bold text-gray-900">{{ reportData.personal.homePhone }}</p>
                 </div>
               </div>
             </div>
 
-            <div class="bg-gray-50 p-6 rounded space-y-4">
-              <h2 class="text-lg font-semibold mb-4">Summary</h2>
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-700">
+            <div class="bg-white p-6 rounded-md">
+              <h2 class="text-md font-semibold mb-6">Summary</h2>
+
+              <div
+                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-8 text-sm text-gray-600"
+              >
+                <!-- Row 1 -->
                 <div>
-                  <strong>Total active monthly installment:</strong><br />
-                  ₦{{ reportData.summary.monthlyInstallment }}
+                  <p class="mb-1">Total active monthly installment</p>
+                  <p class="font-bold text-gray-900">
+                    ₦{{ reportData.summary.monthlyInstallment }}
+                  </p>
                 </div>
                 <div>
-                  <strong>Total no of credit facilities:</strong><br />
-                  {{ reportData.summary.noOfFacilities }}
+                  <p class="mb-1">Total no of credit facilities</p>
+                  <p class="font-bold text-gray-900">{{ reportData.summary.noOfFacilities }}</p>
                 </div>
                 <div>
-                  <strong>Total no of open facilities:</strong><br />
-                  {{ reportData.summary.openFacilities }}
+                  <p class="mb-1">Total no of open facilities</p>
+                  <p class="font-bold text-gray-900">{{ reportData.summary.openFacilities }}</p>
                 </div>
 
+                <!-- Row 2 -->
                 <div>
-                  <strong>Total arrear amount:</strong><br />
-                  ₦{{ reportData.summary.arrearAmount }}
+                  <p class="mb-1">Total arrear amount</p>
+                  <p class="font-bold text-gray-900">₦{{ reportData.summary.arrearAmount }}</p>
                 </div>
                 <div>
-                  <strong>Total outstanding debts:</strong><br />
-                  {{ reportData.summary.outstandingDebts }}
+                  <p class="mb-1">Total outstanding debts</p>
+                  <p class="font-bold text-gray-900">{{ reportData.summary.outstandingDebts }}</p>
                 </div>
                 <div>
-                  <strong>Total no of closed credit facilities:</strong><br />
-                  {{ reportData.summary.closedFacilities }}
+                  <p class="mb-1">Total no of closed credit facilities</p>
+                  <p class="font-bold text-gray-900">{{ reportData.summary.closedFacilities }}</p>
                 </div>
 
+                <!-- Row 3 -->
                 <div>
-                  <strong>Total no of account in arrears:</strong><br />
-                  {{ reportData.summary.noOfAccountsInArrears }}
+                  <p class="mb-1">Total no of account in arrears</p>
+                  <p class="font-bold text-gray-900">
+                    {{ reportData.summary.noOfAccountsInArrears }}
+                  </p>
                 </div>
                 <div>
-                  <strong>Total no of delinquent facilities:</strong><br />
-                  {{ reportData.summary.noOfDelinquentFacilities }}
+                  <p class="mb-1">Total no of delinquent facilities</p>
+                  <p class="font-bold text-gray-900">
+                    {{ reportData.summary.noOfDelinquentFacilities }}
+                  </p>
                 </div>
                 <div>
-                  <strong>Total no written off facilities:</strong><br />
-                  {{ reportData.summary.writtenOffFacilities }}
+                  <p class="mb-1">Total no written off facilities</p>
+                  <p class="font-bold text-gray-900">
+                    {{ reportData.summary.writtenOffFacilities }}
+                  </p>
                 </div>
               </div>
             </div>
 
             <!-- Loan Accounts Table -->
-            <div class="bg-white shadow rounded p-4">
-              <h2 class="font-semibold text-lg mb-4">Loan Accounts</h2>
-              <table class="w-full text-left text-sm border">
+            <div class="bg-white rounded p-4">
+              <h2 class="font-semibold text-md mb-4">Loan Accounts</h2>
+              <table class="w-full text-left text-sm">
                 <thead class="bg-gray-100 text-gray-700">
                   <tr>
-                    <th class="p-2 border">Lender's Name</th>
-                    <th class="p-2 border">Disbursement Date</th>
-                    <th class="p-2 border">Loan Amount</th>
-                    <th class="p-2 border">Loan Balance</th>
-                    <th class="p-2 border">Status</th>
-                    <th class="p-2 border">Action</th>
+                    <th class="p-2">Lender's Name</th>
+                    <th class="p-2">Disbursement Date</th>
+                    <th class="p-2">Loan Amount</th>
+                    <th class="p-2">Loan Balance</th>
+                    <th class="p-2">Status</th>
+                    <th class="p-2">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -352,13 +413,13 @@ const inquiryHistory = [
 
             <!-- Enquiry & Employment History -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div class="bg-white shadow rounded p-4">
-                <h2 class="font-semibold text-lg mb-4">Enquiry History</h2>
-                <table class="w-full text-sm text-left border">
-                  <thead class="bg-gray-100 text-gray-700">
+              <div class="bg-white rounded p-4">
+                <h2 class="font-semibold text-md mb-4">Enquiry History</h2>
+                <table class="w-full text-sm text-left">
+                  <thead class="bg-gray-100">
                     <tr>
-                      <th class="p-2 border">Lender's Name</th>
-                      <th class="p-2 border">Date Requested</th>
+                      <th class="p-2">Lender's Name</th>
+                      <th class="p-2">Date Requested</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -370,13 +431,13 @@ const inquiryHistory = [
                 </table>
               </div>
 
-              <div class="bg-white shadow rounded p-4">
-                <h2 class="font-semibold text-lg mb-4">Employment History</h2>
-                <table class="w-full text-sm text-left border">
-                  <thead class="bg-gray-100 text-gray-700">
+              <div class="bg-white rounded p-4">
+                <h2 class="font-semibold text-md mb-4">Employment History</h2>
+                <table class="w-full text-sm text-left">
+                  <thead class="bg-gray-100">
                     <tr>
-                      <th class="p-2 border">Employer Name</th>
-                      <th class="p-2 border">Date Updated</th>
+                      <th class="p-2">Employer Name</th>
+                      <th class="p-2">Date Updated</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -394,13 +455,13 @@ const inquiryHistory = [
             </div>
 
             <!-- Address History -->
-            <div class="bg-white shadow rounded p-4">
-              <h2 class="font-semibold text-lg mb-4">Address History</h2>
-              <table class="w-full text-sm text-left border">
-                <thead class="bg-gray-100 text-gray-700">
+            <div class="bg-white rounded p-4">
+              <h2 class="font-semibold text-md mb-4">Address History</h2>
+              <table class="w-full text-sm text-left">
+                <thead class="bg-gray-100">
                   <tr>
-                    <th class="p-2 border">Address</th>
-                    <th class="p-2 border">Date Updated</th>
+                    <th class="p-2">Address</th>
+                    <th class="p-2">Date Updated</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -415,90 +476,139 @@ const inquiryHistory = [
 
           <template v-else-if="activeTab === 'credit_registry'">
             <!-- Personal Details Summary -->
-            <div class="bg-white p-6 rounded-lg shadow-md">
-              <h2 class="text-xl font-semibold mb-4">Personal details summary</h2>
-              <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div><strong>Last Name:</strong> {{ personal.lastName }}</div>
-                <div><strong>Gender:</strong> {{ personal.gender }}</div>
-                <div><strong>Phone Number:</strong> {{ personal.phone }}</div>
-                <div><strong>First Name:</strong> {{ personal.firstName }}</div>
-                <div><strong>BVN:</strong> {{ personal.bvn }}</div>
-                <div><strong>Work Telephone:</strong> {{ personal.workPhone }}</div>
-                <div><strong>Other Names:</strong> {{ personal.otherNames }}</div>
-                <div><strong>Date of Birth:</strong> {{ personal.dob }}</div>
-                <div><strong>Home Telephone:</strong> {{ personal.homePhone }}</div>
-                <div class="col-span-full"><strong>Address:</strong> {{ personal.address }}</div>
+            <div class="bg-white p-6 rounded space-y-4">
+              <h2 class="text-md font-semibold mb-4">Personal details summary</h2>
+              <div
+                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-6 gap-x-8 text-sm text-gray-600"
+              >
+                <!-- Column 1 -->
+                <div>
+                  <p class="mb-1">Last Name</p>
+                  <p class="font-bold text-gray-900">{{ reportData.personal.lastName }}</p>
+                </div>
+                <div>
+                  <p class="mb-1">Gender</p>
+                  <p class="font-bold text-gray-900">{{ reportData.personal.gender }}</p>
+                </div>
+                <div>
+                  <p class="mb-1">Phone Number</p>
+                  <p class="font-bold text-gray-900">{{ reportData.personal.phone }}</p>
+                </div>
+                <div>
+                  <p class="mb-1">Latest Residential Address</p>
+                  <p class="font-bold text-gray-900 leading-snug">
+                    {{ reportData.personal.address }}
+                  </p>
+                </div>
+
+                <!-- Column 2 -->
+                <div>
+                  <p class="mb-1">First Name</p>
+                  <p class="font-bold text-gray-900">{{ reportData.personal.firstName }}</p>
+                </div>
+                <div>
+                  <p class="mb-1">Bank Verification Number</p>
+                  <p class="font-bold text-gray-900">{{ reportData.personal.bvn }}</p>
+                </div>
+                <div>
+                  <p class="mb-1">Work Telephone</p>
+                  <p class="font-bold text-gray-900">{{ reportData.personal.workPhone }}</p>
+                </div>
+
+                <!-- Column 3 -->
+                <div>
+                  <p class="mb-1">Other Names</p>
+                  <p class="font-bold text-gray-900">{{ reportData.personal.otherNames }}</p>
+                </div>
+                <div>
+                  <p class="mb-1">Date of Birth</p>
+                  <p class="font-bold text-gray-900">{{ reportData.personal.dob }}</p>
+                </div>
+                <div>
+                  <p class="mb-1">Home Telephone</p>
+                  <p class="font-bold text-gray-900">{{ reportData.personal.homePhone }}</p>
+                </div>
               </div>
             </div>
 
-            <!-- Summary -->
-            <div class="bg-white p-6 rounded-lg shadow-md">
-              <h2 class="text-xl font-semibold mb-4">Summary</h2>
-              <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-white p-6 rounded-md">
+              <h2 class="text-md font-semibold mb-6">Summary</h2>
+
+              <div
+                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-8 text-sm text-gray-600"
+              >
+                <!-- Row 1 -->
                 <div>
-                  <strong>Total active monthly installment:</strong> ₦{{
-                    summary.totalMonthlyInstallment.toLocaleString()
-                  }}
+                  <p class="mb-1">Total active monthly installment</p>
+                  <p class="font-bold text-gray-900">
+                    ₦{{ reportData.summary.monthlyInstallment }}
+                  </p>
                 </div>
                 <div>
-                  <strong>Total no of credit facilities:</strong>
-                  {{ summary.totalCreditFacilities }}
+                  <p class="mb-1">Total no of credit facilities</p>
+                  <p class="font-bold text-gray-900">{{ reportData.summary.noOfFacilities }}</p>
                 </div>
                 <div>
-                  <strong>Total no of open facilities:</strong> {{ summary.totalOpenFacilities }}
+                  <p class="mb-1">Total no of open facilities</p>
+                  <p class="font-bold text-gray-900">{{ reportData.summary.openFacilities }}</p>
+                </div>
+
+                <!-- Row 2 -->
+                <div>
+                  <p class="mb-1">Total arrear amount</p>
+                  <p class="font-bold text-gray-900">₦{{ reportData.summary.arrearAmount }}</p>
                 </div>
                 <div>
-                  <strong>Total credit amount:</strong> ₦{{
-                    summary.totalCreditAmount.toLocaleString()
-                  }}
+                  <p class="mb-1">Total outstanding debts</p>
+                  <p class="font-bold text-gray-900">{{ reportData.summary.outstandingDebts }}</p>
                 </div>
                 <div>
-                  <strong>Total outstanding debts:</strong> ₦{{
-                    summary.outstandingDebts.toLocaleString()
-                  }}
+                  <p class="mb-1">Total no of closed credit facilities</p>
+                  <p class="font-bold text-gray-900">{{ reportData.summary.closedFacilities }}</p>
+                </div>
+
+                <!-- Row 3 -->
+                <div>
+                  <p class="mb-1">Total no of account in arrears</p>
+                  <p class="font-bold text-gray-900">
+                    {{ reportData.summary.noOfAccountsInArrears }}
+                  </p>
                 </div>
                 <div>
-                  <strong>Total no of closed credit facilities:</strong>
-                  {{ summary.closedFacilities }}
+                  <p class="mb-1">Total no of delinquent facilities</p>
+                  <p class="font-bold text-gray-900">
+                    {{ reportData.summary.noOfDelinquentFacilities }}
+                  </p>
                 </div>
                 <div>
-                  <strong>Total no of account in arrears:</strong> {{ summary.accountsInArrears }}
-                </div>
-                <div>
-                  <strong>Total no of delinquent facilities:</strong>
-                  {{ summary.delinquentFacilities }}
-                </div>
-                <div>
-                  <strong>Total no of written off facilities:</strong>
-                  {{ summary.writtenOffFacilities }}
+                  <p class="mb-1">Total no written off facilities</p>
+                  <p class="font-bold text-gray-900">
+                    {{ reportData.summary.writtenOffFacilities }}
+                  </p>
                 </div>
               </div>
             </div>
 
             <!-- Accounts Table Section -->
-            <div
-              v-for="(section, key) in accountSections"
-              :key="key"
-              class="bg-white p-6 rounded-lg shadow-md"
-            >
-              <h2 class="text-xl font-semibold mb-4">{{ section.title }}</h2>
-              <table class="min-w-full text-left border">
+            <div v-for="(section, key) in accountSections" :key="key" class="bg-white p-6 rounded">
+              <h2 class="text-md font-semibold mb-4">{{ section.title }}</h2>
+              <table class="min-w-full text-left">
                 <thead>
                   <tr class="bg-gray-100 text-sm">
-                    <th class="p-2 border">Lender's Name</th>
-                    <th class="p-2 border">Disbursement Date</th>
-                    <th class="p-2 border">Loan Amount</th>
-                    <th class="p-2 border">Loan Balance</th>
-                    <th class="p-2 border">Action</th>
+                    <th class="p-2">Lender's Name</th>
+                    <th class="p-2">Disbursement Date</th>
+                    <th class="p-2">Loan Amount</th>
+                    <th class="p-2">Loan Balance</th>
+                    <th class="p-2">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="(item, i) in section.data" :key="i" class="text-sm">
-                    <td class="p-2 border">{{ item.lender }}</td>
-                    <td class="p-2 border">{{ item.date }}</td>
-                    <td class="p-2 border">₦{{ item.amount.toLocaleString() }}</td>
-                    <td class="p-2 border">₦{{ item.balance.toLocaleString() }}</td>
-                    <td class="p-2 border">
+                    <td class="p-2">{{ item.lender }}</td>
+                    <td class="p-2">{{ item.date }}</td>
+                    <td class="p-2">₦{{ item.amount.toLocaleString() }}</td>
+                    <td class="p-2">₦{{ item.balance.toLocaleString() }}</td>
+                    <td class="p-2">
                       <button
                         class="bg-blue-600 text-white text-xs px-3 py-1 rounded hover:bg-blue-700"
                       >
@@ -511,25 +621,25 @@ const inquiryHistory = [
             </div>
 
             <!-- Derogatory Accounts -->
-            <div class="bg-white p-6 rounded-lg shadow-md mb-6">
-              <h2 class="text-xl font-semibold mb-4">Derogatory Accounts</h2>
-              <table class="min-w-full text-left border">
+            <div class="bg-white p-6 rounded mb-6">
+              <h2 class="text-md font-semibold mb-4">Derogatory Accounts</h2>
+              <table class="min-w-full text-left">
                 <thead>
                   <tr class="bg-gray-100 text-sm">
-                    <th class="p-2 border">Lender's Name</th>
-                    <th class="p-2 border">Disbursement Date</th>
-                    <th class="p-2 border">Loan Amount</th>
-                    <th class="p-2 border">Loan Balance</th>
-                    <th class="p-2 border">Action</th>
+                    <th class="p-2">Lender's Name</th>
+                    <th class="p-2">Disbursement Date</th>
+                    <th class="p-2">Loan Amount</th>
+                    <th class="p-2">Loan Balance</th>
+                    <th class="p-2">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="(item, i) in derogatoryAccounts" :key="i" class="text-sm">
-                    <td class="p-2 border">{{ item.lender }}</td>
-                    <td class="p-2 border">{{ item.date }}</td>
-                    <td class="p-2 border">₦{{ item.amount.toLocaleString() }}</td>
-                    <td class="p-2 border">₦{{ item.balance.toLocaleString() }}</td>
-                    <td class="p-2 border">
+                    <td class="p-2">{{ item.lender }}</td>
+                    <td class="p-2">{{ item.date }}</td>
+                    <td class="p-2">₦{{ item.amount.toLocaleString() }}</td>
+                    <td class="p-2">₦{{ item.balance.toLocaleString() }}</td>
+                    <td class="p-2">
                       <button
                         class="bg-blue-600 text-white text-xs px-3 py-1 rounded hover:bg-blue-700"
                       >
@@ -542,25 +652,25 @@ const inquiryHistory = [
             </div>
 
             <!-- Written Off Accounts -->
-            <div class="bg-white p-6 rounded-lg shadow-md mb-6">
-              <h2 class="text-xl font-semibold mb-4">Written Off Accounts</h2>
-              <table class="min-w-full text-left border">
+            <div class="bg-white p-6 rounded mb-6">
+              <h2 class="text-md font-semibold mb-4">Written Off Accounts</h2>
+              <table class="min-w-full text-left">
                 <thead>
                   <tr class="bg-gray-100 text-sm">
-                    <th class="p-2 border">Lender's Name</th>
-                    <th class="p-2 border">Disbursement Date</th>
-                    <th class="p-2 border">Loan Amount</th>
-                    <th class="p-2 border">Loan Balance</th>
-                    <th class="p-2 border">Action</th>
+                    <th class="p-2">Lender's Name</th>
+                    <th class="p-2">Disbursement Date</th>
+                    <th class="p-2">Loan Amount</th>
+                    <th class="p-2">Loan Balance</th>
+                    <th class="p-2">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="(item, i) in writtenOffAccounts" :key="i" class="text-sm">
-                    <td class="p-2 border">{{ item.lender }}</td>
-                    <td class="p-2 border">{{ item.date }}</td>
-                    <td class="p-2 border">₦{{ item.amount.toLocaleString() }}</td>
-                    <td class="p-2 border">₦{{ item.balance.toLocaleString() }}</td>
-                    <td class="p-2 border">
+                    <td class="p-2">{{ item.lender }}</td>
+                    <td class="p-2">{{ item.date }}</td>
+                    <td class="p-2">₦{{ item.amount.toLocaleString() }}</td>
+                    <td class="p-2">₦{{ item.balance.toLocaleString() }}</td>
+                    <td class="p-2">
                       <button
                         class="bg-blue-600 text-white text-xs px-3 py-1 rounded hover:bg-blue-700"
                       >
@@ -573,25 +683,25 @@ const inquiryHistory = [
             </div>
 
             <!-- Unknown Account Status -->
-            <div class="bg-white p-6 rounded-lg shadow-md mb-6">
-              <h2 class="text-xl font-semibold mb-4">Unknown Account Status</h2>
-              <table class="min-w-full text-left border">
+            <div class="bg-white p-6 rounded mb-6">
+              <h2 class="text-md font-semibold mb-4">Unknown Account Status</h2>
+              <table class="min-w-full text-left">
                 <thead>
                   <tr class="bg-gray-100 text-sm">
-                    <th class="p-2 border">Lender's Name</th>
-                    <th class="p-2 border">Disbursement Date</th>
-                    <th class="p-2 border">Loan Amount</th>
-                    <th class="p-2 border">Loan Balance</th>
-                    <th class="p-2 border">Action</th>
+                    <th class="p-2">Lender's Name</th>
+                    <th class="p-2">Disbursement Date</th>
+                    <th class="p-2">Loan Amount</th>
+                    <th class="p-2">Loan Balance</th>
+                    <th class="p-2">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="(item, i) in unknownAccounts" :key="i" class="text-sm">
-                    <td class="p-2 border">{{ item.lender }}</td>
-                    <td class="p-2 border">{{ item.date }}</td>
-                    <td class="p-2 border">₦{{ item.amount.toLocaleString() }}</td>
-                    <td class="p-2 border">₦{{ item.balance.toLocaleString() }}</td>
-                    <td class="p-2 border">
+                    <td class="p-2">{{ item.lender }}</td>
+                    <td class="p-2">{{ item.date }}</td>
+                    <td class="p-2">₦{{ item.amount.toLocaleString() }}</td>
+                    <td class="p-2">₦{{ item.balance.toLocaleString() }}</td>
+                    <td class="p-2">
                       <button
                         class="bg-blue-600 text-white text-xs px-3 py-1 rounded hover:bg-blue-700"
                       >
@@ -604,23 +714,23 @@ const inquiryHistory = [
             </div>
 
             <!-- Inquiry History -->
-            <div class="bg-white p-6 rounded-lg shadow-md mb-6">
-              <h2 class="text-xl font-semibold mb-4">Inquiry History</h2>
-              <table class="min-w-full text-left border">
+            <div class="bg-white p-6 rounded mb-6">
+              <h2 class="text-md font-semibold mb-4">Inquiry History</h2>
+              <table class="min-w-full text-left">
                 <thead>
                   <tr class="bg-gray-100 text-sm">
-                    <th class="p-2 border">Subscriber Name</th>
-                    <th class="p-2 border">Inquiry Date</th>
-                    <th class="p-2 border">Contact Phone</th>
-                    <th class="p-2 border">Inquiry Reason</th>
+                    <th class="p-2">Subscriber Name</th>
+                    <th class="p-2">Inquiry Date</th>
+                    <th class="p-2">Contact Phone</th>
+                    <th class="p-2">Inquiry Reason</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="(item, i) in inquiryHistory" :key="i" class="text-sm">
-                    <td class="p-2 border">{{ item.subscriber }}</td>
-                    <td class="p-2 border">{{ item.date }}</td>
-                    <td class="p-2 border">{{ item.phone }}</td>
-                    <td class="p-2 border">{{ item.reason }}</td>
+                    <td class="p-2">{{ item.subscriber }}</td>
+                    <td class="p-2">{{ item.date }}</td>
+                    <td class="p-2">{{ item.phone }}</td>
+                    <td class="p-2">{{ item.reason }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -640,5 +750,9 @@ const inquiryHistory = [
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+.custom-btn {
+  text-transform: none;
+  background-color: #1f5aa3;
 }
 </style>
