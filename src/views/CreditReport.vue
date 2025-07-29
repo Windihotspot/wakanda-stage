@@ -1,14 +1,52 @@
 <script setup>
 import MainLayout from '@/layouts/full/MainLayout.vue'
-import { ref } from 'vue'
-
+import { ref, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+const route = useRoute()
 const activeTab = ref('first_central')
+const loading = ref(false)
+import Axios from 'axios'
+import { useAuthStore } from '@/stores/auth'
+const authStore = useAuthStore()
 
 const tabs = [
   { key: 'first_central', label: 'First Central' },
   { key: 'credit_registry', label: 'Credit Registry' },
-  { key: 'crc', label: 'CRC' }
+  // { key: 'crc', label: 'CRC' }
 ]
+
+const fetchCreditReport = async (creditReportId) => {
+  const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
+
+  console.log(savedAuth)
+
+  const token = savedAuth ? savedAuth?.token : computed(() => authStore.token)?.value
+
+  const tenantId = savedAuth
+    ? savedAuth.user?.business_name
+      ? savedAuth.user?.id
+      : savedAuth.user?.tenant_id
+    : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
+        ?.value
+
+  console.log('tenant id:', tenantId)
+
+  const apiUrl = `https://staging.getjupita.com/api/${tenantId}/get-credit-check-key?unique_key=${creditReportId}`
+  loading.value = true
+
+  try {
+    const response = await Axios.get(apiUrl, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+
+    console.log('response of credit report:', response)
+  } catch (error) {
+    console.log('error fetching credit report:', error.response.data)
+  }
+}
 
 // Mock Data (for example)
 const reportData = {
@@ -221,6 +259,16 @@ const inquiryHistory = [
     reason: 'Other'
   }
 ]
+
+onMounted(() => {
+  const unique_key = route.params.unique_key
+  if (unique_key) {
+    fetchCreditReport(unique_key)
+  } else {
+    error.value = 'Invalid unique id.'
+    loading.value = false
+  }
+})
 </script>
 
 <template>
@@ -252,7 +300,7 @@ const inquiryHistory = [
       </div>
     </div>
 
-    <div class="mt-4 p-2 max-w-5xl mx-auto space-y-6">
+    <div class="mt-4 p-2 mx-auto space-y-6">
       <!-- Tab Content Transition -->
       <transition name="fade" mode="out-in">
         <div :key="activeTab" class="space-y-6">

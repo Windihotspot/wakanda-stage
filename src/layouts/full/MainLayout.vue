@@ -17,7 +17,7 @@ onMounted(() => {
   <v-app>
     <!--- Header -->
     <!-- ---------------------------------------------- -->
-    <v-app-bar app elevation="4" class="pa-2">
+    <v-app-bar app elevation="1" class="pa-2">
      
       <v-btn class="hidden-md-and-up" icon @click="drawer = !drawer">
         <v-icon>fa-solid fa-bars</v-icon>
@@ -35,7 +35,7 @@ onMounted(() => {
     <v-navigation-drawer
       left
       :permanent="$vuetify.display.mdAndUp"
-      elevation="10"
+      elevation="1"
       app
       :temporary="$vuetify.display.mdAndDown"
       v-model="drawer"

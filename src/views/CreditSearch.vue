@@ -1,9 +1,11 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import MainLayout from '@/layouts/full/MainLayout.vue'
 import moment from 'moment'
 import Axios from 'axios'
-
+import { useRouter } from 'vue-router'
+const router = useRouter()
+import { ElLoading, ElNotification } from 'element-plus'
 const statuses = ['All', 'Success', 'Failed']
 const selectedStatus = ref('All')
 const searchQuery = ref('')
@@ -97,12 +99,22 @@ const isLoading = ref(false)
 // Computed filtered list based on selectedStatus and searchQuery
 const filteredCreditStatements = computed(() => {
   return creditStatements.value.filter((credit) => {
-    const matchesStatus = selectedStatus.value === 'All' || credit.status === selectedStatus.value
+    const matchesStatus =
+      selectedStatus.value === 'All' || credit.success === (selectedStatus.value === 'Success')
+
+    const bureauMatchesSearch = Object.entries(credit)
+      .filter(([key, value]) => key.endsWith('_history') && value === true)
+      .some(([key]) => {
+        const bureauName = key.replace('_credit_history', '').replace(/_/g, ' ').toLowerCase()
+        return bureauName.includes(searchQuery.value.toLowerCase())
+      })
+
     const matchesSearch =
       searchQuery.value === '' ||
-      credit.id.toString().toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      credit.report_type.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      credit.bureau_name.toLowerCase().includes(searchQuery.value.toLowerCase())
+      credit.unique_key?.toString().toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+      credit.id_type?.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+      credit.bureau_name?.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+      bureauMatchesSearch
 
     return matchesStatus && matchesSearch
   })
@@ -111,6 +123,7 @@ const filteredCreditStatements = computed(() => {
 const activeTab = ref('individual')
 
 // Individual
+const loading = ref(false)
 const enquiryReasonIndividual = ref('')
 const bvnIndividual = ref('')
 const consentIndividual = ref(false)
@@ -130,10 +143,6 @@ const reportOptionsCompany = ref([
   { label: 'Credit Registry', value: 'credit_registry', checked: true },
   { label: 'CRC', value: 'crc', checked: true }
 ])
-
-const submitCompanyForm = () => {
-  closeModal()
-}
 
 const fetchCreditChecks = async () => {
   const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
@@ -176,43 +185,134 @@ const submitIndividualForm = async () => {
 
   const token = savedAuth ? savedAuth?.token : computed(() => authStore.token)?.value
 
-  const borrower_id = savedAuth
+  const tenant_id = savedAuth
     ? savedAuth.user?.business_name
       ? savedAuth.user?.id
       : savedAuth.user?.tenant_id
     : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
         ?.value
 
-  // Create query parameters
-  const params = new URLSearchParams({
-    id_type: 'individual',
-    id_string: bvnIndividual.value,
-    purpose: enquiryReasonIndividual.value,
-    refresh: false,
-    'services[]': 'fcbc'
-  })
-
-  console.log('run credit checks request:', params)
-
-  const API_URL = `https://staging.getjupita.com/api/${borrower_id}/check-credit-history?${params.toString()}`
+  const API_URL = `https://staging.getjupita.com/api/${tenant_id}/check-credit-history`
 
   try {
-    isLoading.value = true
-    const response = await Axios.get(API_URL, {
+    loading.value = true
+    const payload = {
+      id_type: 'individual',
+      id_string: bvnIndividual.value,
+      purpose: enquiryReasonIndividual.value,
+      refresh: true,
+      services: ['credit_registry', 'fcbc']
+    }
+
+    console.log('Sending credit check request payload:', payload)
+
+    const response = await Axios.post(API_URL, payload, {
       headers: {
-        Authorization: `Bearer ${token}`
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
       }
     })
 
     console.log('Credit check response:', response.data)
+    ElNotification({
+      title: 'Success',
+      message: 'Credit search successful!',
+      type: 'success',
+      position: 'top-right',
+      showClose: true
+    })
+
     closeModal()
     fetchCreditChecks() // Refresh credit checks
   } catch (error) {
-    console.error('Error running individual credit check:', error)
+    ElNotification({
+      title: 'Failed',
+      message: 'Credit search failed!',
+      type: 'failed',
+      position: 'top-right',
+      showClose: true
+    })
+    console.log('Error running individual credit check:', error.response.data.data)
   } finally {
-    isLoading.value = false
+    loading.value = false
   }
 }
+
+const submitCompanyForm = async () => {
+  const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
+
+  console.log(savedAuth)
+
+  const token = savedAuth ? savedAuth?.token : computed(() => authStore.token)?.value
+
+  const tenant_id = savedAuth
+    ? savedAuth.user?.business_name
+      ? savedAuth.user?.id
+      : savedAuth.user?.tenant_id
+    : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
+        ?.value
+
+  const API_URL = `https://staging.getjupita.com/api/${tenant_id}/check-credit-history`
+
+  try {
+    loading.value = true
+    const payload = {
+      id_type: 'business',
+      id_string: rcNumber.value,
+      purpose: enquiryReasonCompany.value,
+      refresh: true,
+      services: ['credit_registry', 'fcbc']
+    }
+
+    console.log('Sending credit check request payload:', payload)
+
+    const response = await Axios.post(API_URL, payload, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+
+    console.log('Credit check response:', response.data)
+    ElNotification({
+      title: 'Success',
+      message: 'Credit search successful!',
+      type: 'success',
+      position: 'top-right',
+      showClose: true
+    })
+
+    closeModal()
+    fetchCreditChecks() // Refresh credit checks
+  } catch (error) {
+    const errorMessage =
+      error?.response?.data?.data || // Fallback to `data`
+      error?.message || // General JS error
+      'An unexpected error occurred.'
+
+    ElNotification({
+      title: 'Failed',
+      message: errorMessage,
+      type: 'error',
+      position: 'top-right',
+      showClose: true,
+      duration: 6000
+    })
+
+    console.error('Error running business credit check:', errorMessage)
+  } finally {
+    loading.value = false
+  }
+}
+
+// Navigate to credit report page
+const goToReport = (creditReportId) => {
+  router.push({ name: 'CreditReport', params: { unique_key: creditReportId } })
+}
+
+watch([searchQuery, selectedStatus], () => {
+  console.log('Filtered list updated:', filteredCreditStatements.value)
+})
 
 onMounted(() => {
   fetchCreditChecks()
@@ -303,28 +403,46 @@ onMounted(() => {
           <tbody class="text-gray-700 text-sm font-light bg-white rounded-xl shadow-lg">
             <tr
               v-for="(credit, index) in filteredCreditStatements"
-              :key="credit.id"
+              :key="credit.unique_key || credit.id || index"
               class="border-b border-gray-200 font-normal"
             >
               <td class="py-3 px-6 text-left">{{ index + 1 }}</td>
 
-              <td class="py-3 px-6">{{ credit.id }}</td>
+              <td class="py-3 px-6">{{ credit.unique_key }}</td>
               <td class="py-3 px-6">{{ moment(credit.created_date).format('MMMM Do, YYYY') }}</td>
-              <td class="py-3 px-6">{{ credit.report_type }}</td>
-              <td class="py-3 px-6">{{ credit.bureau_name }}</td>
+              <td class="py-3 px-6">{{ credit.id_type }}</td>
+              <td class="py-3 px-6">
+                {{
+                  Object.entries(credit)
+                    .filter(([key, value]) => key.endsWith('_history') && value === true)
+                    .map(([key]) => {
+                      if (key.includes('fcbc')) return 'First Central'
+                      if (key.includes('crn')) return 'CRC'
+                      if (key.includes('credit_registry')) return 'Credit Registry'
+                      // fallback for unknown bureau names
+                      return key
+                        .replace('_credit_history', '')
+                        .replace(/_/g, ' ')
+                        .replace(/\b\w/g, (l) => l.toUpperCase())
+                    })
+                    .join(' | ')
+                }}
+              </td>
+
               <td class="py-3 px-6">
                 <span
                   :class="
-                    credit.status === 'Success'
+                    credit.success
                       ? 'text-green-600 py-1 px-2 text-xs font-semibold rounded-full bg-green-100'
                       : 'text-red-600 py-1 px-2 text-xs font-semibold rounded-full bg-red-100'
                   "
                 >
-                  {{ credit.status }}
+                  {{ credit.success ? 'Success' : 'Failed' }}
                 </span>
               </td>
               <td class="py-3 px-6 text-center">
                 <span
+                  @click="goToReport(credit.unique_key)"
                   class="bg-[#1f5aa3] text-white px-4 py-1 rounded hover:bg-blue-600 cursor-pointer"
                 >
                   View
@@ -422,6 +540,17 @@ onMounted(() => {
                     />
                   </div>
 
+                  <div
+                    v-if="loading"
+                    class="absolute inset-0 bg-white rounded-lg shadow-2xl bg-opacity-90 flex flex-col items-center justify-center z-50 p-8 space-y-6"
+                  >
+                    <img src="/src/assets/relax.png" class="w-35 h-50 mb-4" alt="" />
+                    <p class="text-md font-semibold text-center">
+                      🧘Please sit and relax while we process your credit search…
+                    </p>
+                    <v-progress-circular indeterminate color="blue" size="48" />
+                  </div>
+
                   <!-- Consent Checkbox -->
                   <div class="bg-red-100 text-red-800 p-4 rounded flex items-start space-x-2">
                     <el-checkbox v-model="consentIndividual" class="custom-checkbox" />
@@ -444,44 +573,40 @@ onMounted(() => {
                 <div v-else-if="activeTab === 'company'" class="space-y-4">
                   <h2 class="text-lg font-semibold">Company Credit Search</h2>
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <!-- Enquiry Reason -->
-    <v-select
-      v-model="enquiryReasonCompany"
-      :items="[
-        'Supplier Verification',
-        'Partnership Review',
-        'Credit Assessment'
-      ]"
-      label="Enquiry Reason"
-      placeholder="Select enquiry reason"
-      variant="outlined"
-      color="#1f5aa3"
-      density="comfortable"
-      required
-    ></v-select>
+                    <!-- Enquiry Reason -->
+                    <v-select
+                      v-model="enquiryReasonCompany"
+                      :items="['Supplier Verification', 'Partnership Review', 'Credit Assessment']"
+                      label="Enquiry Reason"
+                      placeholder="Select enquiry reason"
+                      variant="outlined"
+                      color="#1f5aa3"
+                      density="comfortable"
+                      required
+                    ></v-select>
 
-    <!-- Business Name -->
-    <v-text-field
-      v-model="businessName"
-      label="Business Name"
-      placeholder="Enter Business name"
-      variant="outlined"
-      color="#1f5aa3"
-      density="comfortable"
-      required
-    ></v-text-field>
+                    <!-- Business Name -->
+                    <v-text-field
+                      v-model="businessName"
+                      label="Business Name"
+                      placeholder="Enter Business name"
+                      variant="outlined"
+                      color="#1f5aa3"
+                      density="comfortable"
+                      required
+                    ></v-text-field>
 
-    <!-- Business Registration Number -->
-    <v-text-field
-      v-model="rcNumber"
-      label="Business Registration Number"
-      placeholder="Enter business number"
-      variant="outlined"
-      color="#1f5aa3"
-      density="comfortable"
-      required
-    ></v-text-field>
-  </div>
+                    <!-- Business Registration Number -->
+                    <v-text-field
+                      v-model="rcNumber"
+                      label="Business Registration Number"
+                      placeholder="Enter business number"
+                      variant="outlined"
+                      color="#1f5aa3"
+                      density="comfortable"
+                      required
+                    ></v-text-field>
+                  </div>
                   <div class="flex flex-wrap gap-6">
                     <el-checkbox
                       v-for="(option, index) in reportOptionsCompany"
@@ -492,6 +617,16 @@ onMounted(() => {
                     />
                   </div>
 
+                  <div
+                    v-if="loading"
+                    class="absolute inset-0 bg-white rounded-lg shadow-2xl bg-opacity-90 flex flex-col items-center justify-center z-50 p-8 space-y-6"
+                  >
+                    <img src="/src/assets/relax.png" class="w-35 h-50 mb-4" alt="" />
+                    <p class="text-md font-semibold text-center">
+                      🧘Please sit and relax while we process your credit search…
+                    </p>
+                    <v-progress-circular indeterminate color="blue" size="48" />
+                  </div>
                   <!-- Consent Checkbox -->
                   <div class="bg-red-100 text-red-800 p-4 rounded flex items-start space-x-2">
                     <el-checkbox v-model="consentCompany" class="custom-checkbox" />
@@ -519,6 +654,10 @@ onMounted(() => {
 </template>
 
 <style scoped>
+/* Raise z-index for Element Plus notifications */
+.el-notification {
+  z-index: 9999 !important;
+}
 .custom-btn {
   text-transform: none;
   background-color: #1f5aa3;
@@ -528,6 +667,4 @@ onMounted(() => {
   background-color: #22c55e !important; /* Tailwind's green-500 */
   border-color: #22c55e !important;
 }
-
-
 </style>

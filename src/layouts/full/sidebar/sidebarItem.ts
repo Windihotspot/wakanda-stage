@@ -5,6 +5,11 @@ export default [
     path: '/dashboard'
   },
   {
+    title: 'Applications',
+    icon: 'fa-solid fa-database', 
+    path: '/applications'
+  },
+  {
     title: 'Credit Search',
     icon: 'fa-solid fa-chart-line', 
     path: '/credit-search'

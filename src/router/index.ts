@@ -10,6 +10,7 @@ import ResetPassword from '@/views/ResetPassword.vue'
 import PasswordReset from '@/views/PasswordReset.vue'
 import CreditSearch from '@/views/CreditSearch.vue'
 import CreditReport from '@/views/CreditReport.vue'
+import ApplicationsView from '@/views/ApplicationsView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -65,17 +66,16 @@ const router = createRouter({
       path: '/credit-search',
       name: 'credit-search',
       component: CreditSearch
-    }
-  ,
-    {
-      path: '/credit-report',
-      name: 'credit-report',
-      component: CreditReport
     },
     {
-      path: '/statement-analysis/:id',
-      name: 'StatementAnalysis',
-      component: () => import('@/views/StatementAnalysis.vue'),
+      path: '/applications',
+      name: 'applications',
+      component: ApplicationsView
+    },
+    {
+      path: '/credit-report/:unique_key',
+      name: 'CreditReport',
+      component: () => import('@/views/CreditReport.vue'),
       props: true
     },
     {

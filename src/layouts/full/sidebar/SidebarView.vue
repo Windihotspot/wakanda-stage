@@ -91,7 +91,15 @@ const logout = async () => {
 
 <style scoped>
 .side-bar {
-  overflow: hidden !important;
+  width: 250px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100vh;
 }
 
 .logout-btn:hover {
