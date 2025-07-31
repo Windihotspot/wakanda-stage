@@ -6,6 +6,7 @@ import Axios from 'axios'
 import { useRouter } from 'vue-router'
 const router = useRouter()
 import { ElLoading, ElNotification } from 'element-plus'
+import confetti from 'canvas-confetti'
 const statuses = ['All', 'Success', 'Failed']
 const selectedStatus = ref('All')
 const searchQuery = ref('')
@@ -144,6 +145,43 @@ const reportOptionsCompany = ref([
   { label: 'CRC', value: 'crc', checked: true }
 ])
 
+const fireConfetti = () => {
+  const duration = 2 * 1000
+  const animationEnd = Date.now() + duration
+  const defaults = {
+    startVelocity: 30,
+    spread: 360,
+    ticks: 60,
+    zIndex: 1000
+  }
+
+  const interval = setInterval(() => {
+    const timeLeft = animationEnd - Date.now()
+
+    if (timeLeft <= 0) {
+      clearInterval(interval)
+      return
+    }
+
+    const particleCount = 50 * (timeLeft / duration)
+    confetti({
+      ...defaults,
+      particleCount,
+      origin: { x: Math.random(), y: Math.random() - 0.2 }
+    })
+  }, 250)
+}
+
+const resetIndividualForm = () => {
+  bvnIndividual.value = ''
+  enquiryReasonIndividual.value = null
+}
+
+const resetCompanyForm = () => {
+  rcNumber.value = ''
+  enquiryReasonCompany.value = null
+}
+
 const fetchCreditChecks = async () => {
   const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
 
@@ -177,7 +215,7 @@ const fetchCreditChecks = async () => {
     isLoading.value = false
   }
 }
-
+const individualForm = ref()
 const submitIndividualForm = async () => {
   const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
 
@@ -193,7 +231,8 @@ const submitIndividualForm = async () => {
         ?.value
 
   const API_URL = `https://staging.getjupita.com/api/${tenant_id}/check-credit-history`
-
+  const isValid = await individualForm.value?.validate()
+  if (!isValid) return
   try {
     loading.value = true
     const payload = {
@@ -222,6 +261,9 @@ const submitIndividualForm = async () => {
       showClose: true
     })
 
+    fireConfetti()
+    resetIndividualForm()
+
     closeModal()
     fetchCreditChecks() // Refresh credit checks
   } catch (error) {
@@ -237,6 +279,8 @@ const submitIndividualForm = async () => {
     loading.value = false
   }
 }
+
+const formValid = ref(false)
 
 const submitCompanyForm = async () => {
   const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
@@ -254,6 +298,8 @@ const submitCompanyForm = async () => {
 
   const API_URL = `https://staging.getjupita.com/api/${tenant_id}/check-credit-history`
 
+  const isValid = await companyForm.value.validate()
+  if (!isValid) return
   try {
     loading.value = true
     const payload = {
@@ -281,6 +327,9 @@ const submitCompanyForm = async () => {
       position: 'top-right',
       showClose: true
     })
+
+    fireConfetti()
+    resetCompanyForm()
 
     closeModal()
     fetchCreditChecks() // Refresh credit checks
@@ -313,6 +362,29 @@ const goToReport = (creditReportId) => {
 watch([searchQuery, selectedStatus], () => {
   console.log('Filtered list updated:', filteredCreditStatements.value)
 })
+
+const creditSearchReasons = [
+  'Loan Application',
+  'Mortgage Pre-approval',
+  'Credit Card Application',
+  'Employment Background Check',
+  'Rental Application',
+  'Car Lease Application',
+  'Business Loan Assessment',
+  'Student Loan Verification',
+  'Government Grant Evaluation',
+  'Personal Finance Review',
+  'Credit Limit Increase',
+  'Insurance Underwriting',
+  'Debt Consolidation',
+  'Guarantor Assessment',
+  'Legal Proceedings',
+  'Fraud Investigation',
+  'Pre-employment Screening',
+  'Partner Due Diligence',
+  'Account Opening Due Diligence',
+  'Regulatory Compliance Check'
+]
 
 onMounted(() => {
   fetchCreditChecks()
@@ -496,41 +568,45 @@ onMounted(() => {
                 Company
               </button>
             </div>
-
+            
             <!-- Tab content transition -->
             <transition name="fade" mode="out-in">
               <div :key="activeTab">
                 <!-- Individual Form -->
                 <div v-if="activeTab === 'individual'" class="space-y-4">
                   <h2 class="text-lg font-semibold">Individual Credit Search</h2>
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <v-select
-                      variant="outlined"
-                      color="#1f5aa3"
-                      v-model="enquiryReasonIndividual"
-                      :items="['Employment', 'Loan Application', 'Background Check']"
-                      label="Enquiry Reason"
-                      placeholder="Choose reason for enquiry"
-                      required
-                      outlined
-                      dense
-                      return-object
-                      :menu-props="{ maxHeight: '200' }"
-                    ></v-select>
+                  <v-form ref="individualForm" @submit.prevent="submitIndividualForm">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <v-select
+                        v-model="enquiryReasonIndividual"
+                        :items="creditSearchReasons"
+                        label="Enquiry Reason"
+                        placeholder="Choose reason for enquiry"
+                        variant="outlined"
+                        color="#1f5aa3"
+                        density="comfortable"
+                        :rules="[(v) => !!v || 'Enquiry reason is required']"
+                        required
+                        :menu-props="{ maxHeight: '200' }"
+                      ></v-select>
 
-                    <v-text-field
-                      variant="outlined"
-                      color="#1f5aa3"
-                      v-model="bvnIndividual"
-                      label="Bank Verification Number"
-                      placeholder="Enter BVN"
-                      required
-                      outlined
-                      dense
-                    ></v-text-field>
-                  </div>
+                      <v-text-field
+                        v-model="bvnIndividual"
+                        label="Bank Verification Number"
+                        placeholder="Enter BVN"
+                        variant="outlined"
+                        color="#1f5aa3"
+                        density="comfortable"
+                        :rules="[
+                          (v) => !!v || 'BVN is required',
+                          (v) => /^\d{11}$/.test(v) || 'BVN must be 11 digits'
+                        ]"
+                        required
+                      ></v-text-field>
+                    </div>
+                  </v-form>
 
-                  <div class="flex flex-wrap gap-6">
+                  <div class="m-4 flex flex-wrap gap-6">
                     <el-checkbox
                       v-for="(option, index) in reportOptionsIndividual"
                       :key="index"
@@ -540,16 +616,17 @@ onMounted(() => {
                     />
                   </div>
 
-                  <div
-                    v-if="loading"
-                    class="absolute inset-0 bg-white rounded-lg shadow-2xl bg-opacity-90 flex flex-col items-center justify-center z-50 p-8 space-y-6"
-                  >
-                    <img src="/src/assets/relax.png" class="w-35 h-50 mb-4" alt="" />
-                    <p class="text-md font-semibold text-center">
-                      🧘Please sit and relax while we process your credit search…
-                    </p>
-                    <v-progress-circular indeterminate color="blue" size="48" />
-                  </div>
+                <div
+  v-if="loading"
+  class="absolute top-0 left-0 right-0 bg-white bg-opacity-90 flex flex-col items-center justify-start z-50 p-6 space-y-4 max-h-[400px] rounded shadow-md"
+>
+  <img src="/src/assets/relax.png" class="w-28 h-50 mb-2" alt="" />
+  <p class="text-md font-semibold text-center">
+    🧘Please sit and relax while we process your credit search…
+  </p>
+  <v-progress-circular indeterminate color="blue" size="36" />
+</div>
+
 
                   <!-- Consent Checkbox -->
                   <div class="bg-red-100 text-red-800 p-4 rounded flex items-start space-x-2">
@@ -572,42 +649,49 @@ onMounted(() => {
                 <!-- Company Form -->
                 <div v-else-if="activeTab === 'company'" class="space-y-4">
                   <h2 class="text-lg font-semibold">Company Credit Search</h2>
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <!-- Enquiry Reason -->
-                    <v-select
-                      v-model="enquiryReasonCompany"
-                      :items="['Supplier Verification', 'Partnership Review', 'Credit Assessment']"
-                      label="Enquiry Reason"
-                      placeholder="Select enquiry reason"
-                      variant="outlined"
-                      color="#1f5aa3"
-                      density="comfortable"
-                      required
-                    ></v-select>
 
-                    <!-- Business Name -->
-                    <v-text-field
-                      v-model="businessName"
-                      label="Business Name"
-                      placeholder="Enter Business name"
-                      variant="outlined"
-                      color="#1f5aa3"
-                      density="comfortable"
-                      required
-                    ></v-text-field>
+                  <v-form ref="companyForm" v-model="formValid" @submit.prevent="submitCompanyForm">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <!-- Enquiry Reason -->
+                      <v-select
+                        v-model="enquiryReasonCompany"
+                        :items="creditSearchReasons"
+                        label="Enquiry Reason"
+                        placeholder="Select enquiry reason"
+                        variant="outlined"
+                        density="comfortable"
+                        color="#1f5aa3"
+                        :rules="[(v) => !!v || 'Reason is required']"
+                        required
+                      ></v-select>
 
-                    <!-- Business Registration Number -->
-                    <v-text-field
-                      v-model="rcNumber"
-                      label="Business Registration Number"
-                      placeholder="Enter business number"
-                      variant="outlined"
-                      color="#1f5aa3"
-                      density="comfortable"
-                      required
-                    ></v-text-field>
-                  </div>
-                  <div class="flex flex-wrap gap-6">
+                      <!-- Business Name -->
+                      <v-text-field
+                        v-model="businessName"
+                        label="Business Name"
+                        placeholder="Enter Business name"
+                        variant="outlined"
+                        density="comfortable"
+                        color="#1f5aa3"
+                        :rules="[(v) => !!v || 'Business name is required']"
+                        required
+                      ></v-text-field>
+
+                      <!-- Business Registration Number -->
+                      <v-text-field
+                        v-model="rcNumber"
+                        label="Business Registration Number"
+                        placeholder="Enter business number"
+                        variant="outlined"
+                        density="comfortable"
+                        color="#1f5aa3"
+                        :rules="[(v) => !!v || 'RC number is required']"
+                        required
+                      ></v-text-field>
+                    </div>
+                  </v-form>
+
+                  <div class="flex m-4 flex-wrap gap-6">
                     <el-checkbox
                       v-for="(option, index) in reportOptionsCompany"
                       :key="index"
