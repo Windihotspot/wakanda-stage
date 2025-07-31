@@ -286,7 +286,7 @@ const submitCompanyForm = async () => {
     fetchCreditChecks() // Refresh credit checks
   } catch (error) {
     const errorMessage =
-      error?.response?.data?.data || // Fallback to `data`
+      error?.error || // Fallback to `data`
       error?.message || // General JS error
       'An unexpected error occurred.'
 

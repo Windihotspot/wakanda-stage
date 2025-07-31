@@ -11,6 +11,7 @@ import PasswordReset from '@/views/PasswordReset.vue'
 import CreditSearch from '@/views/CreditSearch.vue'
 import CreditReport from '@/views/CreditReport.vue'
 import ApplicationsView from '@/views/ApplicationsView.vue'
+import SiteDown from '@/views/SiteDown.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -71,6 +72,11 @@ const router = createRouter({
       path: '/applications',
       name: 'applications',
       component: ApplicationsView
+    },
+    {
+      path: '/sitedown',
+      name: 'sitedown',
+      component: SiteDown
     },
     {
       path: '/credit-report/:unique_key',

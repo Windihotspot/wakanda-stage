@@ -8,17 +8,41 @@ const loading = ref(false)
 import Axios from 'axios'
 import { useAuthStore } from '@/stores/auth'
 const authStore = useAuthStore()
+import moment from 'moment'
 
 const tabs = [
   { key: 'first_central', label: 'First Central' },
-  { key: 'credit_registry', label: 'Credit Registry' },
-  // { key: 'crc', label: 'CRC' }
+  { key: 'credit_registry', label: 'Credit Registry' }
 ]
+
+// FCBC report sections
+const personal = ref({})
+const summary = ref({})
+const creditAgreementSummary = ref([])
+const enquiryHistory = ref([])
+const employmentHistory = ref([])
+const addressHistory = ref([])
+
+const loanAccounts = ref([])
+const derogatoryAccounts = ref([])
+const writtenOffAccounts = ref([])
+const unknownAccounts = ref([])
+const inquiryHistory = ref([])
+
+// 🔧 Utility: merge FCBC array into single object
+const mergeFcbcArray = (arr) => {
+  const result = {}
+  for (const item of arr) {
+    const key = Object.keys(item)[0]
+    result[key] = item[key]
+  }
+  return result
+}
 
 const fetchCreditReport = async (creditReportId) => {
   const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
 
-  console.log(savedAuth)
+  console.log('🟢 Saved auth:', savedAuth)
 
   const token = savedAuth ? savedAuth?.token : computed(() => authStore.token)?.value
 
@@ -29,7 +53,7 @@ const fetchCreditReport = async (creditReportId) => {
     : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
         ?.value
 
-  console.log('tenant id:', tenantId)
+  console.log('🟢 Tenant ID:', tenantId)
 
   const apiUrl = `https://staging.getjupita.com/api/${tenantId}/get-credit-check-key?unique_key=${creditReportId}`
   loading.value = true
@@ -42,230 +66,228 @@ const fetchCreditReport = async (creditReportId) => {
       }
     })
 
-    console.log('response of credit report:', response)
+    console.log('📦 Raw API Response:', response.data.data)
+
+    const report = response.data.data
+    console.log('🟢 Full Report:', report)
+
+    const creditHistory = report?.credit_history
+
+    if (!creditHistory) {
+      console.warn('❌ credit_history missing in response')
+      return
+    }
+
+    const rawFcbc = creditHistory?.fcbc_credit_history
+    const crnCreditHistory = creditHistory?.crn_credit_history
+    const creditRegistryHistory = creditHistory?.credit_registry_history.AccountData
+
+    console.log('🟢 FCBC (array):', rawFcbc)
+    console.log('🟢 CRN:', crnCreditHistory)
+    console.log('🟢 Credit Registry History Account Data:', creditRegistryHistory)
+
+    if (Array.isArray(rawFcbc) && rawFcbc.length > 0) {
+      const fcbcCreditHistory = mergeFcbcArray(rawFcbc)
+      console.log('✅ Merged FCBC Object:', fcbcCreditHistory)
+
+      // Personal Details
+      const rawPersonal = fcbcCreditHistory?.PersonalDetailsSummary
+      personal.value = Array.isArray(rawPersonal) && rawPersonal.length > 0 ? rawPersonal[0] : {}
+      console.log('✅ Personal:', personal.value)
+
+      // Summary
+      const rawSummary = fcbcCreditHistory?.CreditAccountSummary
+      summary.value = Array.isArray(rawSummary) && rawSummary.length > 0 ? rawSummary[0] : {}
+      console.log('✅ Summary:', summary.value)
+
+      // Credit Agreements
+      // Credit Agreements
+      const rawCreditAgreementSummary = fcbcCreditHistory?.CreditAgreementSummary ?? []
+      creditAgreementSummary.value = rawCreditAgreementSummary.map((item) => ({
+        lender: item.SubscriberName,
+        date: moment(item.DateAccountOpened).format('DD/MM/YYYY'),
+        rawDate: moment(item.LastUpdatedDate),
+        amount: parseFloat(item.OpeningBalanceAmt ?? '0'),
+        balance: parseFloat(item.CurrentBalanceAmt ?? '0'),
+        status: item.AccountStatus,
+
+        // Additional fields for dropdown
+        accountNo: item.AccountNo,
+        closedDate: item.ClosedDate,
+        duration: item.LoanDuration,
+        repaymentFrequency: item.RepaymentFrequency,
+        overdue: item.AmountOverdue,
+        instalment: item.InstalmentAmount,
+        performanceStatus: item.PerformanceStatus,
+        currency: item.Currency
+      }))
+
+      console.log('✅ Credit Agreement Summary:', creditAgreementSummary.value)
+
+      // Enquiry history
+      const rawEnquiryHistoryTop = fcbcCreditHistory?.EnquiryHistoryTop ?? []
+      enquiryHistory.value = rawEnquiryHistoryTop.map((item) => ({
+        lender: item.SubscriberName,
+        date: moment(item.DateRequested).format('DD/MM/YYYY'),
+        rawDate: moment(item.LastUpdatedDate)
+      }))
+      console.log('✅ Enquiry History:', enquiryHistory.value)
+
+      // Employment history
+      const rawEmploymentHistory = fcbcCreditHistory?.EmploymentHistory ?? []
+      employmentHistory.value = rawEmploymentHistory.map((item) => ({
+        employerName: item.EmployerDetail,
+        date: moment(item.UpdateDate).format('DD/MM/YYYY'),
+        rawDate: moment(item.UpdateDate)
+      }))
+      console.log('✅ Employment History:', employmentHistory.value)
+
+      // Address history
+      const rawAddressHistory = fcbcCreditHistory?.AddressHistory ?? []
+      addressHistory.value = rawAddressHistory.map((item) => ({
+        address: item.Address1,
+        date: moment(item.UpdateDate).format('DD/MM/YYYY'),
+        rawDate: moment(item.UpdateDate)
+      }))
+      console.log('✅ Address History:', addressHistory.value)
+
+      // credit registry
+
+      if (creditRegistryHistory && Array.isArray(creditRegistryHistory.PerformingAccounts)) {
+        loanAccounts.value = creditRegistryHistory.PerformingAccounts.map((account) => ({
+          lender: account.CreditorName,
+          date: moment(account.Date_Opened).format('DD/MM/YYYY'),
+          amount: account.Credit_Limit || 0,
+          balance: account.Balance || 0,
+          status: account.Account_Status || 'Performing',
+          raw: account // optional for future use
+        }))
+
+        console.log('✅ loanAccounts (Performing Only):', loanAccounts.value)
+      } else {
+        console.warn('⚠️ PerformingAccounts not found')
+      }
+      // Derogatory Accounts Mapping
+      if (Array.isArray(creditRegistryHistory.DerogatoryAccounts)) {
+        derogatoryAccounts.value = creditRegistryHistory.DerogatoryAccounts.map((account) => ({
+          lender: account.CreditorName,
+          date: moment(account.Date_Opened).format('DD/MM/YYYY'),
+          amount: account.Credit_Limit || 0,
+          balance: account.Balance || 0,
+          status: account.Account_Status || 'Derogatory',
+          raw: account
+        }))
+
+        console.log('✅ Derogatory Accounts:', derogatoryAccounts.value)
+      } else {
+        console.warn('⚠️ DerogatoryAccounts not found')
+      }
+
+      if (creditRegistryHistory && Array.isArray(creditRegistryHistory.WrittenOffAccounts)) {
+        writtenOffAccounts.value = creditRegistryHistory.WrittenOffAccounts.map((account) => ({
+          lender: account.CreditorName || 'N/A',
+          date: moment(account.Date_Opened).format('DD/MM/YYYY'),
+          amount: account.Credit_Limit || 0,
+          balance: account.Balance || 0,
+          raw: account // optional for future use
+        }))
+
+        console.log('✅ writtenOffAccounts:', writtenOffAccounts.value)
+      } else {
+        console.warn('⚠️ WrittenOffAccounts not found or invalid')
+      }
+
+      // Unknown Accounts (status not in any known category)
+      if (creditRegistryHistory) {
+        const knownStatuses = ['Performing', 'Derogatory', 'WrittenOff']
+        const allAccounts = [
+          ...(creditRegistryHistory.PerformingAccounts || []),
+          ...(creditRegistryHistory.DerogatoryAccounts || []),
+          ...(creditRegistryHistory.WrittenOffAccounts || [])
+        ]
+
+        const knownIds = new Set(allAccounts.map((acc) => acc.Account_No))
+
+        const unknownRaw = Object.values(creditRegistryHistory)
+          .flat()
+          .filter((acc) => acc && acc.Account_No && !knownIds.has(acc.Account_No))
+
+        unknownAccounts.value = unknownRaw.map((account) => ({
+          lender: account.CreditorName || 'Unknown',
+          date: moment(account.Date_Opened).format('DD/MM/YYYY'),
+          amount: account.Credit_Limit || 0,
+          balance: account.Balance || 0,
+          raw: account
+        }))
+
+        console.log('✅ Unknown Accounts:', unknownAccounts.value)
+      }
+      // Inquiry History
+      if (creditRegistryHistory.InquiryHistory?.length) {
+        inquiryHistory.value = creditRegistryHistory.InquiryHistory.map((entry) => ({
+          subscriber: entry.Subscriber || 'Unknown',
+          date: moment(entry.InquiryDate).format('DD/MM/YYYY'),
+          phone: entry.ContactPhone || 'N/A',
+          reason: entry.Reason || 'N/A',
+          raw: entry
+        }))
+        console.log('✅ Inquiry History:', inquiryHistory.value)
+      }
+    } else {
+      console.warn('⚠️ fcbc_credit_history is empty or invalid')
+    }
   } catch (error) {
-    console.log('error fetching credit report:', error.response.data)
+    console.error('❌ Error fetching credit report:', error)
+  } finally {
+    loading.value = false
   }
 }
 
-// Mock Data (for example)
-const reportData = {
-  personal: {
-    lastName: 'Eze',
-    firstName: 'Titus',
-    otherNames: 'Doe',
-    gender: 'Male',
-    bvn: '223344556677',
-    dob: '25-09-1922',
-    phone: '09065515225',
-    workPhone: '09065515225',
-    homePhone: '09065515225',
-    address: '15, Amazing Grace CDA, Oloko Road, Ota, Ogun State'
-  },
-  summary: {
-    monthlyInstallment: '203,456,567.89',
-    arrearAmount: '3,456,567.89',
-    noOfAccountsInArrears: 1,
-    noOfFacilities: 8,
-    outstandingDebts: '3,456,567.89',
-    noOfDelinquentFacilities: 1,
-    openFacilities: 8,
-    closedFacilities: 0,
-    writtenOffFacilities: 0
-  }
+const expandedRow = ref(null)
+
+const toggleRow = (index) => {
+  expandedRow.value = expandedRow.value === index ? null : index
 }
 
-const loanAccounts = ref([
+const loans = ref([
   {
     lender: 'Links Microfinance Bank',
-    date: '16th Nov, 2024',
-    amount: '₦32,500,000.00',
-    balance: '₦0.00',
-    status: 'Closed'
+    disbursementDate: '16th Nov, 2024',
+    loanAmount: 32500000,
+    loanBalance: 0,
+    status: 'Closed',
+    accountNo: '032SPLG212310004',
+    amountOverdue: 937500.1,
+    instalmentAmount: 937500.1,
+    loanDuration: 7,
+    repaymentFrequency: 'Monthly',
+    dateOpened: '07/12/2018',
+    closedDate: '01/05/2019',
+    performanceStatus: 'Performing'
   },
   {
-    lender: 'Links Microfinance Bank',
-    date: '16th Nov, 2024',
-    amount: '₦3,500,000.00',
-    balance: '₦0.00',
-    status: 'Closed'
-  },
-  {
-    lender: 'Carbon Microfinance Bank',
-    date: '16th Nov, 2024',
-    amount: '₦2,500,000.00',
-    balance: '₦0.00',
-    status: 'Closed'
-  },
-  {
-    lender: 'Carbon Microfinance Bank',
-    date: '16th Nov, 2024',
-    amount: '₦500,000.00',
-    balance: '₦0.00',
-    status: 'Closed'
-  },
-  {
-    lender: 'Crednet Technology Limited',
-    date: '16th Nov, 2024',
-    amount: '₦350,000.00',
-    balance: '₦350,000.00',
-    status: 'Open'
-  },
-  {
-    lender: 'AB Microfinance Bank',
-    date: '16th Nov, 2024',
-    amount: '₦32,500,000.00',
-    balance: '₦0.00',
-    status: 'Closed'
-  },
-  {
-    lender: 'Addosser Microfinance Bank',
-    date: '16th Nov, 2024',
-    amount: '₦3,000,000.00',
-    balance: '₦0.00',
-    status: 'Closed'
-  },
-  {
-    lender: 'Shara Technology Mgt. Nig. Ltd.',
-    date: '16th Nov, 2024',
-    amount: '₦7,000,000.00',
-    balance: '₦0.00',
-    status: 'Closed'
-  },
-  {
-    lender: 'Shara Technology Mgt. Nig. Ltd.',
-    date: '16th Nov, 2024',
-    amount: '₦3,000,000.00',
-    balance: '₦3,000,000.00',
-    status: 'Open'
-  },
-  {
-    lender: 'ESPORTA HOTEL AND SUITES',
-    date: '16th Nov, 2024',
-    amount: '₦73,000,000.00',
-    balance: '₦0.00',
-    status: 'Closed'
+    lender: 'ABC Bank',
+    disbursementDate: '10th Jan, 2022',
+    loanAmount: 12500000,
+    loanBalance: 2500000,
+    status: 'Open',
+    accountNo: '012XPLG784512005',
+    amountOverdue: 200000,
+    instalmentAmount: 1000000,
+    loanDuration: 12,
+    repaymentFrequency: 'Quarterly',
+    dateOpened: '01/01/2022',
+    closedDate: 'N/A',
+    performanceStatus: 'Non-Performing'
   }
 ])
-
-const enquiryHistory = ref([
-  { lender: 'Links Microfinance Bank', date: '16th Nov, 2024' },
-  { lender: 'Links Microfinance Bank', date: '16th Nov, 2024' },
-  { lender: 'Links Microfinance Bank', date: '16th Nov, 2024' },
-  { lender: 'Links Microfinance Bank', date: '16th Nov, 2024' },
-  { lender: 'Links Microfinance Bank', date: '16th Nov, 2024' }
-])
-
-const employmentHistory = ref([
-  { employer: 'Links Microfinance Bank', date: '16th Nov, 2024' },
-  { employer: 'Links Microfinance Bank', date: '16th Nov, 2024' },
-  { employer: 'Links Microfinance Bank', date: '16th Nov, 2024' },
-  { employer: 'Links Microfinance Bank', date: '16th Nov, 2024' },
-  { employer: 'Links Microfinance Bank', date: '16th Nov, 2024' }
-])
-
-const addressHistory = ref([
-  { address: '39, JAKES ESTATE, ABRAHAM ADESANYA, AJAH, ETI OSA, LAGOS', date: '16th Nov, 2024' },
-  { address: '39, JAKES ESTATE, ABRAHAM ADESANYA, AJAH, ETI OSA, LAGOS', date: '16th Nov, 2024' }
-])
-
-const personal = ref({
-  lastName: 'Eze',
-  firstName: 'Titus',
-  otherNames: 'Doe',
-  gender: 'Male',
-  phone: '09056518285',
-  workPhone: '09056518285',
-  homePhone: '09056518285',
-  address: '15, Amazing Grace CDA, Oloko Road, Ota, Ogun State',
-  bvn: '223344566677',
-  dob: '25-09-1982'
-})
-
-const summary = ref({
-  totalMonthlyInstallment: 203456567.89,
-  totalCreditFacilities: 8,
-  totalOpenFacilities: 8,
-  totalCreditAmount: 3546567.89,
-  outstandingDebts: 3465567.89,
-  closedFacilities: 0,
-  accountsInArrears: 1,
-  delinquentFacilities: 1,
-  writtenOffFacilities: 0
-})
-
-const performingAccounts = [
-  { lender: 'Links Microfinance Bank', date: '16th Nov, 2024', amount: 32500000, balance: 0 },
-  { lender: 'Links Microfinance Bank', date: '16th Nov, 2024', amount: 3500000, balance: 0 },
-  { lender: 'Carbon Microfinance Bank', date: '16th Nov, 2024', amount: 2500000, balance: 0 },
-  { lender: 'Carbon Microfinance Bank', date: '16th Nov, 2024', amount: 500000, balance: 0 }
-]
-
-const delinquentAccounts = [
-  { lender: 'Links Microfinance Bank', date: '16th Nov, 2024', amount: 32500000, balance: 0 }
-]
-
-const closedAccounts = [...performingAccounts]
-
-const accountSections = {
-  performing: {
-    title: 'Performing Accounts',
-    data: performingAccounts
-  },
-  delinquent: {
-    title: 'Delinquent Accounts',
-    data: delinquentAccounts
-  },
-  closed: {
-    title: 'Closed Accounts',
-    data: closedAccounts
-  }
-}
-
-const derogatoryAccounts = [
-  { lender: 'Links Microfinance Bank', date: '16th Nov, 2024', amount: 32500000, balance: 0 },
-  { lender: 'Links Microfinance Bank', date: '16th Nov, 2024', amount: 3500000, balance: 0 },
-  { lender: 'Carbon Microfinance Bank', date: '16th Nov, 2024', amount: 2500000, balance: 0 },
-  { lender: 'Carbon Microfinance Bank', date: '16th Nov, 2024', amount: 500000, balance: 0 }
-]
-
-const writtenOffAccounts = [...derogatoryAccounts]
-
-const unknownAccounts = [...derogatoryAccounts]
-
-const inquiryHistory = [
-  {
-    subscriber: 'Links Microfinance Bank',
-    date: '16th Nov, 2024',
-    phone: '09056512345',
-    reason: 'Other'
-  },
-  {
-    subscriber: 'Links Microfinance Bank',
-    date: '16th Nov, 2024',
-    phone: '09056512345',
-    reason: 'Other'
-  },
-  {
-    subscriber: 'Links Microfinance Bank',
-    date: '16th Nov, 2024',
-    phone: '09056512345',
-    reason: 'Other'
-  },
-  {
-    subscriber: 'Carbon Microfinance Bank',
-    date: '16th Nov, 2024',
-    phone: '09056512345',
-    reason: 'Other'
-  }
-]
 
 onMounted(() => {
   const unique_key = route.params.unique_key
   if (unique_key) {
     fetchCreditReport(unique_key)
   } else {
-    error.value = 'Invalid unique id.'
+    console.warn('❌ Invalid unique key from route')
     loading.value = false
   }
 })
@@ -305,7 +327,7 @@ onMounted(() => {
       <transition name="fade" mode="out-in">
         <div :key="activeTab" class="space-y-6">
           <template v-if="activeTab === 'first_central'">
-            <!-- Only showing the same data for all tabs, you can customize per tab if needed -->
+            <!-- // personal -->
             <div class="bg-white p-6 rounded space-y-4">
               <h2 class="text-md font-semibold mb-4">Personal details summary</h2>
               <div
@@ -314,53 +336,54 @@ onMounted(() => {
                 <!-- Column 1 -->
                 <div>
                   <p class="mb-1">Last Name</p>
-                  <p class="font-bold text-gray-900">{{ reportData.personal.lastName }}</p>
+                  <p class="font-bold text-gray-900">{{ personal.Surname }}</p>
                 </div>
                 <div>
                   <p class="mb-1">Gender</p>
-                  <p class="font-bold text-gray-900">{{ reportData.personal.gender }}</p>
+                  <p class="font-bold text-gray-900">{{ personal.Gender }}</p>
                 </div>
                 <div>
                   <p class="mb-1">Phone Number</p>
-                  <p class="font-bold text-gray-900">{{ reportData.personal.phone }}</p>
+                  <p class="font-bold text-gray-900">{{ personal.CellularNo }}</p>
                 </div>
                 <div>
                   <p class="mb-1">Latest Residential Address</p>
                   <p class="font-bold text-gray-900 leading-snug">
-                    {{ reportData.personal.address }}
+                    {{ personal.ResidentialAddress1 }}
                   </p>
                 </div>
 
                 <!-- Column 2 -->
                 <div>
                   <p class="mb-1">First Name</p>
-                  <p class="font-bold text-gray-900">{{ reportData.personal.firstName }}</p>
+                  <p class="font-bold text-gray-900">{{ personal.FirstName }}</p>
                 </div>
                 <div>
                   <p class="mb-1">Bank Verification Number</p>
-                  <p class="font-bold text-gray-900">{{ reportData.personal.bvn }}</p>
+                  <p class="font-bold text-gray-900">{{ personal.BankVerificationNo }}</p>
                 </div>
                 <div>
                   <p class="mb-1">Work Telephone</p>
-                  <p class="font-bold text-gray-900">{{ reportData.personal.workPhone }}</p>
+                  <p class="font-bold text-gray-900">{{ personal.WorkTelephoneNo }}</p>
                 </div>
 
                 <!-- Column 3 -->
                 <div>
                   <p class="mb-1">Other Names</p>
-                  <p class="font-bold text-gray-900">{{ reportData.personal.otherNames }}</p>
+                  <p class="font-bold text-gray-900">{{ personal.OtherNames }}</p>
                 </div>
                 <div>
                   <p class="mb-1">Date of Birth</p>
-                  <p class="font-bold text-gray-900">{{ reportData.personal.dob }}</p>
+                  <p class="font-bold text-gray-900">{{ personal.BirthDate }}</p>
                 </div>
                 <div>
                   <p class="mb-1">Home Telephone</p>
-                  <p class="font-bold text-gray-900">{{ reportData.personal.homePhone }}</p>
+                  <p class="font-bold text-gray-900">{{ personal.HomeTelephoneNo }}</p>
                 </div>
               </div>
             </div>
 
+            <!-- Summary -->
             <div class="bg-white p-6 rounded-md">
               <h2 class="text-md font-semibold mb-6">Summary</h2>
 
@@ -370,61 +393,55 @@ onMounted(() => {
                 <!-- Row 1 -->
                 <div>
                   <p class="mb-1">Total active monthly installment</p>
-                  <p class="font-bold text-gray-900">
-                    ₦{{ reportData.summary.monthlyInstallment }}
-                  </p>
+                  <p class="font-bold text-gray-900">₦{{ summary.TotalMonthlyInstalment }}</p>
                 </div>
                 <div>
                   <p class="mb-1">Total no of credit facilities</p>
-                  <p class="font-bold text-gray-900">{{ reportData.summary.noOfFacilities }}</p>
+                  <p class="font-bold text-gray-900"></p>
                 </div>
                 <div>
                   <p class="mb-1">Total no of open facilities</p>
-                  <p class="font-bold text-gray-900">{{ reportData.summary.openFacilities }}</p>
+                  <p class="font-bold text-gray-900"></p>
                 </div>
 
                 <!-- Row 2 -->
                 <div>
                   <p class="mb-1">Total arrear amount</p>
-                  <p class="font-bold text-gray-900">₦{{ reportData.summary.arrearAmount }}</p>
+                  <p class="font-bold text-gray-900">₦{{ summary.Amountarrear }}</p>
                 </div>
                 <div>
                   <p class="mb-1">Total outstanding debts</p>
-                  <p class="font-bold text-gray-900">{{ reportData.summary.outstandingDebts }}</p>
+                  <p class="font-bold text-gray-900">{{ summary.TotalOutstandingdebt }}</p>
                 </div>
                 <div>
                   <p class="mb-1">Total no of closed credit facilities</p>
-                  <p class="font-bold text-gray-900">{{ reportData.summary.closedFacilities }}</p>
+                  <p class="font-bold text-gray-900"></p>
                 </div>
 
                 <!-- Row 3 -->
                 <div>
                   <p class="mb-1">Total no of account in arrears</p>
                   <p class="font-bold text-gray-900">
-                    {{ reportData.summary.noOfAccountsInArrears }}
+                    {{ summary.TotalAccountarrear }}
                   </p>
                 </div>
                 <div>
                   <p class="mb-1">Total no of delinquent facilities</p>
-                  <p class="font-bold text-gray-900">
-                    {{ reportData.summary.noOfDelinquentFacilities }}
-                  </p>
+                  <p class="font-bold text-gray-900"></p>
                 </div>
                 <div>
                   <p class="mb-1">Total no written off facilities</p>
-                  <p class="font-bold text-gray-900">
-                    {{ reportData.summary.writtenOffFacilities }}
-                  </p>
+                  <p class="font-bold text-gray-900"></p>
                 </div>
               </div>
             </div>
 
             <!-- Loan Accounts Table -->
-            <div class="bg-white rounded p-4">
-              <h2 class="font-semibold text-md mb-4">Loan Accounts</h2>
-              <table class="w-full text-left text-sm">
-                <thead class="bg-gray-100 text-gray-700">
-                  <tr>
+            <div class="bg-white p-6 rounded">
+              <h2 class="text-md font-semibold mb-4">Loan Accounts</h2>
+              <table class="min-w-full text-left">
+                <thead>
+                  <tr class="bg-gray-100 text-sm">
                     <th class="p-2">Lender's Name</th>
                     <th class="p-2">Disbursement Date</th>
                     <th class="p-2">Loan Amount</th>
@@ -434,27 +451,54 @@ onMounted(() => {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="(loan, index) in loanAccounts" :key="index" class="border-b">
-                    <td class="p-2">{{ loan.lender }}</td>
-                    <td class="p-2">{{ loan.date }}</td>
-                    <td class="p-2">{{ loan.amount }}</td>
-                    <td class="p-2">{{ loan.balance }}</td>
-                    <td class="p-2">
-                      <span
-                        :class="
-                          loan.status === 'Closed'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
-                        "
-                        class="px-2 py-1 rounded text-xs"
-                      >
-                        {{ loan.status }}
-                      </span>
-                    </td>
-                    <td class="p-2">
-                      <button class="bg-blue-600 text-white px-3 py-1 rounded text-xs">View</button>
-                    </td>
-                  </tr>
+                  <template v-for="(loan, index) in loans" :key="index">
+                    <!-- Main Row -->
+                    <tr class="text-sm border-b">
+                      <td class="p-2">{{ loan.lender }}</td>
+                      <td class="p-2">{{ loan.disbursementDate }}</td>
+                      <td class="p-2">₦{{ loan.loanAmount.toLocaleString() }}</td>
+                      <td class="p-2">₦{{ loan.loanBalance.toLocaleString() }}</td>
+                      <td class="p-2">
+                        <span
+                          :class="
+                            loan.status === 'Closed'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
+                          "
+                          class="px-2 py-1 rounded text-xs"
+                        >
+                          {{ loan.status }}
+                        </span>
+                      </td>
+                      <td class="p-2">
+                        <button
+                          @click="toggleRow(index)"
+                          class="bg-blue-600 text-white text-xs px-3 py-1 rounded hover:bg-blue-700"
+                        >
+                          {{ expandedRow === index ? 'Hide' : 'View' }}
+                        </button>
+                      </td>
+                    </tr>
+
+                    <!-- Dropdown Details Row -->
+                    <tr v-if="expandedRow === index" class="bg-gray-50">
+                      <td colspan="6" class="p-4">
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                          <p><strong>Account number:</strong> {{ loan.accountNo }}</p>
+                          <p><strong>Loan Amount:</strong> ₦{{ loan.loanAmount }}</p>
+                          <p><strong>Current Balance:</strong> ₦{{ loan.loanBalance }}</p>
+                          <p><strong>Amount Overdue:</strong> ₦{{ loan.amountOverdue }}</p>
+                          <p><strong>Instalment Amount:</strong> ₦{{ loan.instalmentAmount }}</p>
+                          <p><strong>Loan Duration:</strong> {{ loan.loanDuration }} months</p>
+                          <p><strong>Repayment Frequency:</strong> {{ loan.repaymentFrequency }}</p>
+                          <p><strong>Date Account Opened:</strong> {{ loan.dateOpened }}</p>
+                          <p><strong>Closed Date:</strong> {{ loan.closedDate }}</p>
+                          <p><strong>Performance Status:</strong> {{ loan.performanceStatus }}</p>
+                          <p><strong>Account Status:</strong> {{ loan.status }}</p>
+                        </div>
+                      </td>
+                    </tr>
+                  </template>
                 </tbody>
               </table>
             </div>
@@ -494,7 +538,7 @@ onMounted(() => {
                       :key="index"
                       class="border-b"
                     >
-                      <td class="p-2">{{ employment.employer }}</td>
+                      <td class="p-2">{{ employment.employerName }}</td>
                       <td class="p-2">{{ employment.date }}</td>
                     </tr>
                   </tbody>
@@ -532,49 +576,47 @@ onMounted(() => {
                 <!-- Column 1 -->
                 <div>
                   <p class="mb-1">Last Name</p>
-                  <p class="font-bold text-gray-900">{{ reportData.personal.lastName }}</p>
+                  <p class="font-bold text-gray-900"></p>
                 </div>
                 <div>
                   <p class="mb-1">Gender</p>
-                  <p class="font-bold text-gray-900">{{ reportData.personal.gender }}</p>
+                  <p class="font-bold text-gray-900"></p>
                 </div>
                 <div>
                   <p class="mb-1">Phone Number</p>
-                  <p class="font-bold text-gray-900">{{ reportData.personal.phone }}</p>
+                  <p class="font-bold text-gray-900"></p>
                 </div>
                 <div>
                   <p class="mb-1">Latest Residential Address</p>
-                  <p class="font-bold text-gray-900 leading-snug">
-                    {{ reportData.personal.address }}
-                  </p>
+                  <p class="font-bold text-gray-900 leading-snug"></p>
                 </div>
 
                 <!-- Column 2 -->
                 <div>
                   <p class="mb-1">First Name</p>
-                  <p class="font-bold text-gray-900">{{ reportData.personal.firstName }}</p>
+                  <p class="font-bold text-gray-900"></p>
                 </div>
                 <div>
                   <p class="mb-1">Bank Verification Number</p>
-                  <p class="font-bold text-gray-900">{{ reportData.personal.bvn }}</p>
+                  <p class="font-bold text-gray-900"></p>
                 </div>
                 <div>
                   <p class="mb-1">Work Telephone</p>
-                  <p class="font-bold text-gray-900">{{ reportData.personal.workPhone }}</p>
+                  <p class="font-bold text-gray-900"></p>
                 </div>
 
                 <!-- Column 3 -->
                 <div>
                   <p class="mb-1">Other Names</p>
-                  <p class="font-bold text-gray-900">{{ reportData.personal.otherNames }}</p>
+                  <p class="font-bold text-gray-900"></p>
                 </div>
                 <div>
                   <p class="mb-1">Date of Birth</p>
-                  <p class="font-bold text-gray-900">{{ reportData.personal.dob }}</p>
+                  <p class="font-bold text-gray-900"></p>
                 </div>
                 <div>
                   <p class="mb-1">Home Telephone</p>
-                  <p class="font-bold text-gray-900">{{ reportData.personal.homePhone }}</p>
+                  <p class="font-bold text-gray-900"></p>
                 </div>
               </div>
             </div>
@@ -588,58 +630,49 @@ onMounted(() => {
                 <!-- Row 1 -->
                 <div>
                   <p class="mb-1">Total active monthly installment</p>
-                  <p class="font-bold text-gray-900">
-                    ₦{{ reportData.summary.monthlyInstallment }}
-                  </p>
+                  <p class="font-bold text-gray-900"></p>
                 </div>
                 <div>
                   <p class="mb-1">Total no of credit facilities</p>
-                  <p class="font-bold text-gray-900">{{ reportData.summary.noOfFacilities }}</p>
+                  <p class="font-bold text-gray-900"></p>
                 </div>
                 <div>
                   <p class="mb-1">Total no of open facilities</p>
-                  <p class="font-bold text-gray-900">{{ reportData.summary.openFacilities }}</p>
+                  <p class="font-bold text-gray-900"></p>
                 </div>
 
                 <!-- Row 2 -->
                 <div>
                   <p class="mb-1">Total arrear amount</p>
-                  <p class="font-bold text-gray-900">₦{{ reportData.summary.arrearAmount }}</p>
+                  <p class="font-bold text-gray-900">₦</p>
                 </div>
                 <div>
                   <p class="mb-1">Total outstanding debts</p>
-                  <p class="font-bold text-gray-900">{{ reportData.summary.outstandingDebts }}</p>
+                  <p class="font-bold text-gray-900"></p>
                 </div>
                 <div>
                   <p class="mb-1">Total no of closed credit facilities</p>
-                  <p class="font-bold text-gray-900">{{ reportData.summary.closedFacilities }}</p>
+                  <p class="font-bold text-gray-900"></p>
                 </div>
 
                 <!-- Row 3 -->
                 <div>
                   <p class="mb-1">Total no of account in arrears</p>
-                  <p class="font-bold text-gray-900">
-                    {{ reportData.summary.noOfAccountsInArrears }}
-                  </p>
+                  <p class="font-bold text-gray-900"></p>
                 </div>
                 <div>
                   <p class="mb-1">Total no of delinquent facilities</p>
-                  <p class="font-bold text-gray-900">
-                    {{ reportData.summary.noOfDelinquentFacilities }}
-                  </p>
+                  <p class="font-bold text-gray-900"></p>
                 </div>
                 <div>
                   <p class="mb-1">Total no written off facilities</p>
-                  <p class="font-bold text-gray-900">
-                    {{ reportData.summary.writtenOffFacilities }}
-                  </p>
+                  <p class="font-bold text-gray-900"></p>
                 </div>
               </div>
             </div>
 
-            <!-- Accounts Table Section -->
-            <div v-for="(section, key) in accountSections" :key="key" class="bg-white p-6 rounded">
-              <h2 class="text-md font-semibold mb-4">{{ section.title }}</h2>
+            <div class="bg-white p-6 rounded">
+              <h2 class="text-md font-semibold mb-4">Loan Accounts</h2>
               <table class="min-w-full text-left">
                 <thead>
                   <tr class="bg-gray-100 text-sm">
@@ -647,49 +680,91 @@ onMounted(() => {
                     <th class="p-2">Disbursement Date</th>
                     <th class="p-2">Loan Amount</th>
                     <th class="p-2">Loan Balance</th>
+                    <th class="p-2">Status</th>
                     <th class="p-2">Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="(item, i) in section.data" :key="i" class="text-sm">
-                    <td class="p-2">{{ item.lender }}</td>
-                    <td class="p-2">{{ item.date }}</td>
-                    <td class="p-2">₦{{ item.amount.toLocaleString() }}</td>
-                    <td class="p-2">₦{{ item.balance.toLocaleString() }}</td>
+                  <tr v-for="(loan, index) in loans" :key="index" class="text-sm border-b">
+                    <td class="p-2">{{ loan.lender }}</td>
+                    <td class="p-2">{{ loan.disbursementDate }}</td>
+                    <td class="p-2">₦{{ loan.loanAmount.toLocaleString() }}</td>
+                    <td class="p-2">₦{{ loan.loanBalance.toLocaleString() }}</td>
+                    <td class="p-2">
+                      <span
+                        :class="
+                          loan.status === 'Closed'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
+                        "
+                        class="px-2 py-1 rounded text-xs"
+                      >
+                        {{ loan.status }}
+                      </span>
+                    </td>
                     <td class="p-2">
                       <button
+                        @click="toggleRow(index)"
                         class="bg-blue-600 text-white text-xs px-3 py-1 rounded hover:bg-blue-700"
                       >
-                        View
+                        {{ expandedRow === index ? 'Hide' : 'View' }}
                       </button>
+                    </td>
+                  </tr>
+
+                  <!-- Dropdown Section -->
+                  <tr v-if="expandedRow === index" class="bg-gray-50">
+                    <td colspan="6" class="p-4">
+                      <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                        <p><strong>Account number:</strong> {{ loan.accountNo }}</p>
+                        <p><strong>Loan Amount:</strong> ₦{{ loan.loanAmount }}</p>
+                        <p><strong>Current Balance:</strong> ₦{{ loan.loanBalance }}</p>
+                        <p><strong>Amount Overdue:</strong> ₦{{ loan.amountOverdue }}</p>
+                        <p><strong>Instalment Amount:</strong> ₦{{ loan.instalmentAmount }}</p>
+                        <p><strong>Loan Duration:</strong> {{ loan.loanDuration }} months</p>
+                        <p><strong>Repayment Frequency:</strong> {{ loan.repaymentFrequency }}</p>
+                        <p><strong>Date Account Opened:</strong> {{ loan.dateOpened }}</p>
+                        <p><strong>Closed Date:</strong> {{ loan.closedDate }}</p>
+                        <p><strong>Performance Status:</strong> {{ loan.performanceStatus }}</p>
+                        <p><strong>Account Status:</strong> {{ loan.status }}</p>
+                      </div>
                     </td>
                   </tr>
                 </tbody>
               </table>
             </div>
 
-            <!-- Derogatory Accounts -->
-            <div class="bg-white p-6 rounded mb-6">
-              <h2 class="text-md font-semibold mb-4">Derogatory Accounts</h2>
-              <table class="min-w-full text-left">
-                <thead>
-                  <tr class="bg-gray-100 text-sm">
-                    <th class="p-2">Lender's Name</th>
-                    <th class="p-2">Disbursement Date</th>
-                    <th class="p-2">Loan Amount</th>
-                    <th class="p-2">Loan Balance</th>
-                    <th class="p-2">Action</th>
+            <!-- Derogatory Loan Accounts -->
+            <div class="bg-white p-6 rounded-md shadow">
+              <h2 class="text-md font-semibold mb-4 text-red-700">Derogatory Loan Accounts</h2>
+              <table class="min-w-full text-left border text-sm">
+                <thead class="bg-gray-100">
+                  <tr>
+                    <th class="p-3 border-b">Lender's Name</th>
+                    <th class="p-3 border-b">Disbursement Date</th>
+                    <th class="p-3 border-b">Loan Amount</th>
+                    <th class="p-3 border-b">Loan Balance</th>
+                    <th class="p-3 border-b">Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="(item, i) in derogatoryAccounts" :key="i" class="text-sm">
-                    <td class="p-2">{{ item.lender }}</td>
-                    <td class="p-2">{{ item.date }}</td>
-                    <td class="p-2">₦{{ item.amount.toLocaleString() }}</td>
-                    <td class="p-2">₦{{ item.balance.toLocaleString() }}</td>
-                    <td class="p-2">
+                  <tr v-if="derogatoryAccounts.length === 0">
+                    <td colspan="5" class="p-4 text-center text-gray-500">
+                      No derogatory accounts found.
+                    </td>
+                  </tr>
+                  <tr
+                    v-for="(loan, index) in derogatoryAccounts"
+                    :key="'derogatory-' + index"
+                    class="hover:bg-gray-50"
+                  >
+                    <td class="p-3 border-b">{{ loan.lender }}</td>
+                    <td class="p-3 border-b">{{ loan.date }}</td>
+                    <td class="p-3 border-b">₦{{ loan.amount.toLocaleString() }}</td>
+                    <td class="p-3 border-b">₦{{ loan.balance.toLocaleString() }}</td>
+                    <td class="p-3 border-b">
                       <button
-                        class="bg-blue-600 text-white text-xs px-3 py-1 rounded hover:bg-blue-700"
+                        class="bg-red-600 text-white text-xs px-3 py-1 rounded hover:bg-red-700"
                       >
                         View
                       </button>
@@ -774,7 +849,11 @@ onMounted(() => {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="(item, i) in inquiryHistory" :key="i" class="text-sm">
+                  <tr
+                    v-for="(item, i) in inquiryHistory"
+                    :key="i"
+                    class="text-sm hover:bg-gray-50 transition-colors"
+                  >
                     <td class="p-2">{{ item.subscriber }}</td>
                     <td class="p-2">{{ item.date }}</td>
                     <td class="p-2">{{ item.phone }}</td>
