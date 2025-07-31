@@ -131,7 +131,7 @@ const consentIndividual = ref(false)
 const reportOptionsIndividual = ref([
   { label: 'First Central', value: 'first_central', checked: true },
   { label: 'Credit Registry', value: 'credit_registry', checked: true },
-  { label: 'CRC', value: 'crc', checked: true }
+ 
 ])
 
 // Company
@@ -142,7 +142,6 @@ const consentCompany = ref(false)
 const reportOptionsCompany = ref([
   { label: 'First Central', value: 'first_central', checked: true },
   { label: 'Credit Registry', value: 'credit_registry', checked: true },
-  { label: 'CRC', value: 'crc', checked: true }
 ])
 
 const fireConfetti = () => {
@@ -165,9 +164,9 @@ const fireConfetti = () => {
 
     const particleCount = 50 * (timeLeft / duration)
     confetti({
-      ...defaults,
       particleCount,
-      origin: { x: Math.random(), y: Math.random() - 0.2 }
+      spread: 70,
+      origin: { y: 0.6 }
     })
   }, 250)
 }
@@ -185,7 +184,6 @@ const resetCompanyForm = () => {
 const fetchCreditChecks = async () => {
   const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
 
-  console.log(savedAuth)
 
   const token = savedAuth ? savedAuth?.token : computed(() => authStore.token)?.value
 
@@ -205,7 +203,6 @@ const fetchCreditChecks = async () => {
         Authorization: `Bearer ${token}`
       }
     })
-    console.log('fetch credit checks response:', response)
     creditStatements.value = response.data.data.credit_checks.data
     console.log('fetch credit checks data:', creditStatements.value)
   } catch (error) {
@@ -219,7 +216,6 @@ const individualForm = ref()
 const submitIndividualForm = async () => {
   const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
 
-  console.log(savedAuth)
 
   const token = savedAuth ? savedAuth?.token : computed(() => authStore.token)?.value
 
@@ -281,11 +277,10 @@ const submitIndividualForm = async () => {
 }
 
 const formValid = ref(false)
-
+const companyForm = ref()
 const submitCompanyForm = async () => {
   const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
 
-  console.log(savedAuth)
 
   const token = savedAuth ? savedAuth?.token : computed(() => authStore.token)?.value
 
@@ -364,28 +359,20 @@ watch([searchQuery, selectedStatus], () => {
 })
 
 const creditSearchReasons = [
-  'Loan Application',
-  'Mortgage Pre-approval',
-  'Credit Card Application',
-  'Employment Background Check',
-  'Rental Application',
-  'Car Lease Application',
-  'Business Loan Assessment',
-  'Student Loan Verification',
-  'Government Grant Evaluation',
-  'Personal Finance Review',
-  'Credit Limit Increase',
-  'Insurance Underwriting',
-  'Debt Consolidation',
-  'Guarantor Assessment',
-  'Legal Proceedings',
-  'Fraud Investigation',
-  'Pre-employment Screening',
-  'Partner Due Diligence',
-  'Account Opening Due Diligence',
-  'Regulatory Compliance Check'
+  'Reviewing of existing credit facility',
+  'Opening of new accounts',
+  'Application for Credit by a borrower',
+  'Fund transfer of N1,000,000 (One Million Naira) and above',
+  'Prospective/Current employee checks',
+  'Tenancy Contracts (For identification purpose)',
+  'Grant/review of insurance policies',
+  'Acceptance of guarantee(s)',
+  'Application for contracts/pre-paid services (telephone etc)',
+  'Court judgement',
+  'Credit scoring of the client by credit bureau',
+  'A written consent from the client',
+  'Legislation'
 ]
-
 onMounted(() => {
   fetchCreditChecks()
 })
@@ -568,7 +555,7 @@ onMounted(() => {
                 Company
               </button>
             </div>
-            
+
             <!-- Tab content transition -->
             <transition name="fade" mode="out-in">
               <div :key="activeTab">
@@ -616,17 +603,21 @@ onMounted(() => {
                     />
                   </div>
 
-                <div
-  v-if="loading"
-  class="absolute top-0 left-0 right-0 bg-white bg-opacity-90 flex flex-col items-center justify-start z-50 p-6 space-y-4 max-h-[400px] rounded shadow-md"
->
-  <img src="/src/assets/relax.png" class="w-28 h-50 mb-2" alt="" />
-  <p class="text-md font-semibold text-center">
-    🧘Please sit and relax while we process your credit search…
-  </p>
-  <v-progress-circular indeterminate color="blue" size="36" />
-</div>
-
+                  <div
+                   style="height: 500px"
+                    v-if="loading"
+                    class="absolute mt-6 inset-0 bg-white bg-opacity-90 flex flex-col items-center justify-center z-50 p-6 space-y-4 rounded-lg"
+                  >
+                    <img
+                      src="/src/assets/relax.png"
+                      class="w-28 mb-2 object-contain"
+                      alt=""
+                    />
+                    <p class="text-md font-semibold text-center">
+                      🧘Please sit and relax while we process your credit search…
+                    </p>
+                    <v-progress-circular indeterminate color="blue" size="36" />
+                  </div>
 
                   <!-- Consent Checkbox -->
                   <div class="bg-red-100 text-red-800 p-4 rounded flex items-start space-x-2">

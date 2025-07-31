@@ -6,7 +6,6 @@ import { useAuthStore } from '@/stores/auth'
 const authStore = useAuthStore()
 const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
 
-console.log(savedAuth);
 
 const token = savedAuth
   ? savedAuth?.token
@@ -102,7 +101,6 @@ const getRoleLabel = (roleValue) => {
 onMounted(() => {
   getRoleLabel()
 
-  console.log('User data from storage:', user)
   if (user) {
     buisnessName.value = user.business_name
   }
