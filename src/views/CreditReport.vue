@@ -35,6 +35,31 @@ const inquiryHistory = ref([])
 const businessData = ref({})
 const directors = ref([])
 
+function formatNaira(value) {
+  if (!value) return '₦0.00'
+
+  // Strip commas or whitespace and parse to float
+  const cleaned = parseFloat(String(value).replace(/,/g, '').trim())
+
+  return new Intl.NumberFormat('en-NG', {
+    style: 'currency',
+    currency: 'NGN',
+    minimumFractionDigits: 2
+  }).format(isNaN(cleaned) ? 0 : cleaned)
+}
+
+function getStatusColor(status) {
+  if (!status || status.trim() === '') return 'grey'
+
+  const normalized = status.toLowerCase().trim()
+
+  if (normalized === 'closed') return 'green'
+  if (normalized === 'open') return 'red'
+  if (normalized === 'paid up') return 'blue'
+
+  return 'grey' // fallback for unknown values
+}
+
 // Normalize FCBC format for both individual (array) and business (object with numeric keys)
 const normalizeFcbcInput = (input) => {
   if (Array.isArray(input)) return input
@@ -119,11 +144,12 @@ const fetchCreditReport = async (creditReportId) => {
 
       // Credit Agreements
       const rawCreditAgreementSummary = fcbcCreditHistory?.CreditAgreementSummary ?? []
-      creditAgreementSummary.value = rawCreditAgreementSummary.map((item) => ({
+      creditAgreementSummary.value = rawCreditAgreementSummary.map((item, index) => ({
+        uid: `${item.AccountNo || 'acc'}-${index}`,
         lender: item.SubscriberName,
         date: moment(item.DateAccountOpened).format('DD/MM/YYYY'),
-        amount: parseFloat(item.OpeningBalanceAmt ?? '0'),
-        balance: parseFloat(item.CurrentBalanceAmt ?? '0'),
+        amount: formatNaira(item.OpeningBalanceAmt ?? '0'),
+        balance: formatNaira(item.CurrentBalanceAmt ?? '0'),
         status: item.AccountStatus,
 
         // Additional fields for dropdown
@@ -131,8 +157,8 @@ const fetchCreditReport = async (creditReportId) => {
         closedDate: item.ClosedDate,
         duration: item.LoanDuration,
         repaymentFrequency: item.RepaymentFrequency,
-        overdue: item.AmountOverdue,
-        instalment: item.InstalmentAmount,
+        overdue: formatNaira(item.AmountOverdue),
+        instalment: formatNaira(item.InstalmentAmount),
         performanceStatus: item.PerformanceStatus,
         currency: item.Currency
       }))
@@ -160,10 +186,18 @@ const fetchCreditReport = async (creditReportId) => {
       // Address history
       const rawAddressHistory = fcbcCreditHistory?.AddressHistory ?? []
       addressHistory.value = rawAddressHistory.map((item) => ({
-        address: item.Address1,
-        date: moment(item.UpdateDate).format('DD/MM/YYYY'),
-        rawDate: moment(item.UpdateDate)
+        address: [
+          item.CommercialAddress1,
+          item.CommercialAddress2,
+          item.CommercialAddress3,
+          item.CommercialAddress4
+        ]
+          .map((part) => part?.trim()) // remove leading/trailing spaces
+          .filter((part) => part) // remove empty or whitespace-only
+          .join(', '),
+        date: item.UpDateOnDate || ''
       }))
+
       console.log('✅FCBC Address History:', addressHistory.value)
 
       // credit registry
@@ -173,8 +207,8 @@ const fetchCreditReport = async (creditReportId) => {
         loanAccounts.value = creditRegistryHistory.PerformingAccounts.map((account) => ({
           lender: account.CreditorName,
           date: moment(account.Date_Opened).format('DD/MM/YYYY'),
-          amount: account.Credit_Limit || 0,
-          balance: account.Balance || 0,
+          amount: formatNaira(account.Credit_Limit || 0),
+          balance: formatNaira(account.Balance || 0),
           status: account.Account_Status || 'Performing',
           raw: account, // optional for future use
 
@@ -183,8 +217,8 @@ const fetchCreditReport = async (creditReportId) => {
           closedDate: account.Balance_Date,
           duration: account.Term,
           repaymentFrequency: account.RepaymentFrequency,
-          overdue: account.AmountOverdue,
-          instalment: account.Minimum_Installment,
+          overdue: formatNaira(account.AmountOverdue),
+          instalment: formatNaira(account.Minimum_Installment),
           performanceStatus: account.Account_Status,
           currency: account.Currency
         }))
@@ -198,8 +232,8 @@ const fetchCreditReport = async (creditReportId) => {
         delinquentAccounts.value = creditRegistryHistory.DelinquentAccounts.map((account) => ({
           lender: account.CreditorName,
           date: moment(account.Date_Opened).format('DD/MM/YYYY'),
-          amount: account.CredidelinquentAccountst_Limit || 0,
-          balance: account.Balance || 0,
+          amount: formatNaira(account.CredidelinquentAccountst_Limit || 0),
+          balance: formatNaira(account.Balance || 0),
           status: account.Account_Status || 'Delinquent',
           raw: account,
 
@@ -208,7 +242,7 @@ const fetchCreditReport = async (creditReportId) => {
           closedDate: account.Balance_Date,
           duration: account.Term,
           repaymentFrequency: account.RepaymentFrequency,
-          overdue: account.AmountOverdue,
+          overdue: formatNaira(account.AmountOverdue),
           instalment: account.Minimum_Installment,
           performanceStatus: account.Account_Status,
           currency: account.Currency
@@ -393,10 +427,12 @@ const fetchCreditReport = async (creditReportId) => {
           item.CommercialAddress3,
           item.CommercialAddress4
         ]
-          .filter(Boolean)
+          .map((part) => part?.trim()) // remove leading/trailing spaces
+          .filter((part) => part) // remove empty or whitespace-only
           .join(', '),
-        date: item.UpDateOnDate || '' // fallback if date is missing
+        date: item.UpDateOnDate || ''
       }))
+
       console.log('✅FCBC Address History:', addressHistory.value)
 
       // credit registry
@@ -574,20 +610,16 @@ const fetchCreditReport = async (creditReportId) => {
 
 const expanded = ref([])
 
-const toggleRow = (rowKey) => {
-  const index = expanded.value.indexOf(rowKey)
-  if (index !== -1) {
-    expanded.value.splice(index, 1)
-  } else {
-    expanded.value.push(rowKey)
-  }
+const toggleRow = (uid) => {
+  expanded.value = expanded.value.includes(uid) ? [] : [uid]
 }
 
-const isExpanded = (rowKey) => expanded.value.includes(rowKey)
+const isExpanded = (uid) => expanded.value.includes(uid)
+
 const loanHeaders = [
   { title: "Lender's Name", key: 'lender' },
   { title: 'Disbursement Date', key: 'date' },
-  { title: 'Loan Amount', key: 'amount' },
+  { title: 'Loan Amount', value: 'amount' },
   { title: 'Loan Balance', key: 'balance' },
   { title: 'Status', key: 'status' },
   { title: 'Action', key: 'action', sortable: false }
@@ -687,62 +719,64 @@ onMounted(() => {
       <transition name="fade" mode="out-in">
         <div v-if="!loading" :key="activeTab" class="space-y-6">
           <template v-if="activeTab === 'first_central'">
-            <!-- // personal -->
-            <div v-if="idType !== 'business'" class="bg-white p-6 rounded space-y-4">
-              <h2 class="text-md font-semibold mb-4">Personal details summary</h2>
+            <div v-if="idType !== 'business'">
+              <!-- // personal -->
+              <div class="bg-white p-6 rounded space-y-4">
+                <h2 class="text-md font-semibold mb-4">Personal details summary</h2>
 
-              <!-- Check if `personal` has any data -->
-              <div
-                v-if="personal && Object.keys(personal).length > 0"
-                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-6 gap-x-8 text-sm text-gray-600"
-              >
-                <!-- All your data fields remain unchanged here -->
-                <div>
-                  <p class="mb-1">Last Name</p>
-                  <p class="font-bold text-gray-900">{{ personal.Surname }}</p>
+                <!-- Check if `personal` has any data -->
+                <div
+                  v-if="personal && Object.keys(personal).length > 0"
+                  class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-6 gap-x-8 text-sm text-gray-600"
+                >
+                  <!-- All your data fields remain unchanged here -->
+                  <div>
+                    <p class="mb-1">Last Name</p>
+                    <p class="font-bold text-gray-900">{{ personal.Surname }}</p>
+                  </div>
+                  <div>
+                    <p class="mb-1">Gender</p>
+                    <p class="font-bold text-gray-900">{{ personal.Gender }}</p>
+                  </div>
+                  <div>
+                    <p class="mb-1">Phone Number</p>
+                    <p class="font-bold text-gray-900">{{ personal.CellularNo }}</p>
+                  </div>
+                  <div>
+                    <p class="mb-1">Latest Residential Address</p>
+                    <p class="font-bold text-gray-900 leading-snug">
+                      {{ personal.ResidentialAddress1 }}
+                    </p>
+                  </div>
+                  <div>
+                    <p class="mb-1">First Name</p>
+                    <p class="font-bold text-gray-900">{{ personal.FirstName }}</p>
+                  </div>
+                  <div>
+                    <p class="mb-1">Bank Verification Number</p>
+                    <p class="font-bold text-gray-900">{{ personal.BankVerificationNo }}</p>
+                  </div>
+                  <div>
+                    <p class="mb-1">Work Telephone</p>
+                    <p class="font-bold text-gray-900">{{ personal.WorkTelephoneNo }}</p>
+                  </div>
+                  <div>
+                    <p class="mb-1">Other Names</p>
+                    <p class="font-bold text-gray-900">{{ personal.OtherNames }}</p>
+                  </div>
+                  <div>
+                    <p class="mb-1">Date of Birth</p>
+                    <p class="font-bold text-gray-900">{{ personal.BirthDate }}</p>
+                  </div>
+                  <div>
+                    <p class="mb-1">Home Telephone</p>
+                    <p class="font-bold text-gray-900">{{ personal.HomeTelephoneNo }}</p>
+                  </div>
                 </div>
-                <div>
-                  <p class="mb-1">Gender</p>
-                  <p class="font-bold text-gray-900">{{ personal.Gender }}</p>
-                </div>
-                <div>
-                  <p class="mb-1">Phone Number</p>
-                  <p class="font-bold text-gray-900">{{ personal.CellularNo }}</p>
-                </div>
-                <div>
-                  <p class="mb-1">Latest Residential Address</p>
-                  <p class="font-bold text-gray-900 leading-snug">
-                    {{ personal.ResidentialAddress1 }}
-                  </p>
-                </div>
-                <div>
-                  <p class="mb-1">First Name</p>
-                  <p class="font-bold text-gray-900">{{ personal.FirstName }}</p>
-                </div>
-                <div>
-                  <p class="mb-1">Bank Verification Number</p>
-                  <p class="font-bold text-gray-900">{{ personal.BankVerificationNo }}</p>
-                </div>
-                <div>
-                  <p class="mb-1">Work Telephone</p>
-                  <p class="font-bold text-gray-900">{{ personal.WorkTelephoneNo }}</p>
-                </div>
-                <div>
-                  <p class="mb-1">Other Names</p>
-                  <p class="font-bold text-gray-900">{{ personal.OtherNames }}</p>
-                </div>
-                <div>
-                  <p class="mb-1">Date of Birth</p>
-                  <p class="font-bold text-gray-900">{{ personal.BirthDate }}</p>
-                </div>
-                <div>
-                  <p class="mb-1">Home Telephone</p>
-                  <p class="font-bold text-gray-900">{{ personal.HomeTelephoneNo }}</p>
-                </div>
+
+                <!-- Fallback message if no data -->
+                <div v-else class="text-gray-500 text-sm italic">No personal data available.</div>
               </div>
-
-              <!-- Fallback message if no data -->
-              <div v-else class="text-gray-500 text-sm italic">No personal data available.</div>
             </div>
 
             <div v-else>
@@ -771,7 +805,7 @@ onMounted(() => {
               </div>
 
               <!-- DIRECTOR INFORMATION TABLE -->
-              <div v-if="idType === 'business'" class="bg-white p-6 rounded space-y-4">
+              <div v-if="idType === 'business'" class="bg-white p-6 rounded space-y-4 mt-4">
                 <h2 class="text-md font-semibold">Director Information</h2>
 
                 <div v-if="directors.length > 0">
@@ -803,7 +837,7 @@ onMounted(() => {
             </div>
 
             <!-- Summary -->
-            <div class="bg-white p-6 rounded-md">
+            <div class="bg-white p-6 rounded-md mt-4">
               <h2 class="text-md font-semibold mb-6">Summary</h2>
 
               <!-- Show data if summary object exists and is not empty -->
@@ -866,42 +900,42 @@ onMounted(() => {
                 <v-data-table
                   :headers="loanHeaders"
                   :items="creditAgreementSummary"
-                  item-value="accountNo"
+                  item-value="uid"
+                  :expanded.sync="expanded"
                   class="elevation-1"
                   fixed-header
                   height="400"
-                  show-expand
                   hide-default-footer
-                  :expanded.sync="expanded"
                 >
                   <!-- Default item row -->
                   <template #item.status="{ item }">
                     <v-chip
-                      :color="item.status === 'Closed' ? 'green' : 'red'"
+                      :color="getStatusColor(item.status)"
                       variant="tonal"
                       size="small"
                       class="text-white"
                     >
-                      {{ item.status }}
+                      {{ item.status?.trim() || 'Unknown' }}
                     </v-chip>
                   </template>
-
-                  <template #item.action="{ index }">
-                    <v-btn size="small" color="primary" @click="toggleRow(index)">View</v-btn>
+                  <template #item.action="{ item }">
+                    <v-btn size="small" color="primary" @click="toggleRow(item.uid)">
+                      {{ isExpanded(item.uid) ? 'Hide' : 'View' }}
+                    </v-btn>
                   </template>
 
                   <!-- Expanded content -->
                   <template #expanded-row="{ item }">
-                    <td :colspan="loanHeaders.length" class="px-4 py-2 bg-gray-50">
+                    <td :colspan="loanHeaders.length" class="px-4 py-2 bg-gray-50 mb-4">
                       <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                         <p><strong>Account number:</strong> {{ item.accountNo }}</p>
-                        <p><strong>Loan Amount:</strong> ₦{{ item.loanAmount }}</p>
-                        <p><strong>Current Balance:</strong> ₦{{ item.loanBalance }}</p>
-                        <p><strong>Amount Overdue:</strong> ₦{{ item.amountOverdue }}</p>
-                        <p><strong>Instalment Amount:</strong> ₦{{ item.instalmentAmount }}</p>
-                        <p><strong>Loan Duration:</strong> {{ item.loanDuration }} months</p>
+                        <p><strong>Loan Amount:</strong> {{ item.amount }}</p>
+                        <p><strong>Current Balance:</strong> {{ item.balance }}</p>
+                        <p><strong>Amount Overdue:</strong> {{ item.overdue }}</p>
+                        <p><strong>Instalment Amount:</strong> {{ item.instalment }}</p>
+                        <p><strong>Loan Duration:</strong> {{ item.loanDuration }}</p>
                         <p><strong>Repayment Frequency:</strong> {{ item.repaymentFrequency }}</p>
-                        <p><strong>Date Account Opened:</strong> {{ item.dateOpened }}</p>
+                        <p><strong>Date Account Opened:</strong> {{ item.date }}</p>
                         <p><strong>Closed Date:</strong> {{ item.closedDate }}</p>
                         <p><strong>Performance Status:</strong> {{ item.performanceStatus }}</p>
                         <p><strong>Account Status:</strong> {{ item.status }}</p>
@@ -969,13 +1003,13 @@ onMounted(() => {
                     <thead class="bg-gray-100 sticky top-0 z-10">
                       <tr>
                         <th class="p-3 font-medium text-gray-700">Address</th>
-                        <th class="p-3 font-medium text-gray-700">Date Updated</th>
+                        <th class="p-3 font-medium text-gray-700 w-40">Date Updated</th>
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
                       <tr v-for="(address, index) in addressHistory" :key="index">
                         <td class="p-3 text-gray-800">{{ address.address }}</td>
-                        <td class="p-3 text-gray-800">{{ address.date }}</td>
+                        <td class="p-3 text-gray-800 w-40">{{ address.date }}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -1289,5 +1323,8 @@ onMounted(() => {
 .custom-btn {
   text-transform: none;
   background-color: #1f5aa3;
+}
+.v-btn {
+  text-transform: none;
 }
 </style>
