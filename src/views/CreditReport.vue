@@ -15,7 +15,7 @@ const tabs = [
   { key: 'first_central', label: 'First Central' },
   { key: 'credit_registry', label: 'Credit Registry' }
 ]
-
+const idType = ref('')
 // FCBC report sections
 const personal = ref({})
 const summary = ref({})
@@ -32,12 +32,31 @@ const writtenOffAccounts = ref([])
 const unknownAccounts = ref([])
 const inquiryHistory = ref([])
 
-// 🔧 Utility: merge FCBC array into single object
+const businessData = ref({})
+const directors = ref([])
+
+// Normalize FCBC format for both individual (array) and business (object with numeric keys)
+const normalizeFcbcInput = (input) => {
+  if (Array.isArray(input)) return input
+
+  const result = []
+  for (const key in input) {
+    if (!isNaN(Number(key))) {
+      result.push(input[key])
+    }
+  }
+  return result
+}
+
+// Merge keys from each item in the normalized array
 const mergeFcbcArray = (arr) => {
   const result = {}
   for (const item of arr) {
-    const key = Object.keys(item)[0]
-    result[key] = item[key]
+    for (const key in item) {
+      if (Object.hasOwn(item, key)) {
+        result[key] = item[key]
+      }
+    }
   }
   return result
 }
@@ -67,30 +86,31 @@ const fetchCreditReport = async (creditReportId) => {
 
     const report = response.data.data
     console.log('🟢 Full Report:', report)
-
     const creditHistory = report?.credit_history
-
-    if (!creditHistory) {
-      console.warn('❌ credit_history missing in response')
-      return
-    }
-
+    idType.value = creditHistory.id_type
     const rawFcbc = creditHistory?.fcbc_credit_history
-    const crnCreditHistory = creditHistory?.crn_credit_history
+    const normalizedFcbc = normalizeFcbcInput(rawFcbc)
+    console.log('🔍 Normalized FCBC:', normalizedFcbc)
     const creditRegistryHistory = creditHistory?.credit_registry_history.AccountData
+    console.log('🔍 typeof rawFcbc:', typeof rawFcbc)
+    console.log('🔍 rawFcbc isArray:', Array.isArray(rawFcbc))
+    console.log('✅ FCBC raw(array)Data:', rawFcbc)
+    console.log('✅ Credit Registry History Data:', creditRegistryHistory)
+    console.log('📌 idType', idType.value)
 
-    console.log('✅ FCBC (array)Data:', rawFcbc)
-    console.log('✅ CRN Data:', crnCreditHistory)
-    console.log('✅ Credit Registry History Account Data:', creditRegistryHistory)
+    const fcbcCreditHistory = mergeFcbcArray(normalizedFcbc)
+    console.log('✅ Merged FCBC Object:', fcbcCreditHistory)
 
-    if (Array.isArray(rawFcbc) && rawFcbc.length > 0) {
-      const fcbcCreditHistory = mergeFcbcArray(rawFcbc)
-      console.log('✅ Merged FCBC Object:', fcbcCreditHistory)
+    if (idType.value === 'business') {
+      // Business specific extraction
+      const businessDataArray = fcbcCreditHistory?.BusinessData || []
+      const directorInfoArray = fcbcCreditHistory?.DirectorInformation || []
 
-      // Personal Details
-      const rawPersonal = fcbcCreditHistory?.PersonalDetailsSummary
-      personal.value = Array.isArray(rawPersonal) && rawPersonal.length > 0 ? rawPersonal[0] : {}
-      console.log('✅FCBC Personal:', personal.value)
+      businessData.value = businessDataArray[0] || {}
+      directors.value = directorInfoArray
+
+      console.log('✅ BusinessData:', businessData.value)
+      console.log('✅ Directors:', directors.value)
 
       // Summary
       const rawSummary = fcbcCreditHistory?.CreditAccountSummary
@@ -98,12 +118,10 @@ const fetchCreditReport = async (creditReportId) => {
       console.log('✅FCBC Summary:', summary.value)
 
       // Credit Agreements
-      // Credit Agreements
       const rawCreditAgreementSummary = fcbcCreditHistory?.CreditAgreementSummary ?? []
       creditAgreementSummary.value = rawCreditAgreementSummary.map((item) => ({
         lender: item.SubscriberName,
         date: moment(item.DateAccountOpened).format('DD/MM/YYYY'),
-        rawDate: moment(item.LastUpdatedDate),
         amount: parseFloat(item.OpeningBalanceAmt ?? '0'),
         balance: parseFloat(item.CurrentBalanceAmt ?? '0'),
         status: item.AccountStatus,
@@ -173,7 +191,7 @@ const fetchCreditReport = async (creditReportId) => {
 
         console.log('✅credit registry performing accounts:', loanAccounts.value)
       } else {
-        console.warn('⚠️ PerformingAccounts not found')
+        console.warn('⚠️credit registry PerformingAccounts not found')
       }
       // Delinquents Accounts Mapping
       if (Array.isArray(creditRegistryHistory.DelinquentAccounts)) {
@@ -198,7 +216,7 @@ const fetchCreditReport = async (creditReportId) => {
 
         console.log('✅credit registry Delinquents Accounts:', delinquentAccounts.value)
       } else {
-        console.warn('⚠️ Delinquents accounts not found')
+        console.warn('⚠️credit registry Delinquents accounts not found')
       }
 
       // Closed Accounts Mapping
@@ -224,7 +242,7 @@ const fetchCreditReport = async (creditReportId) => {
 
         console.log('✅credit registry Closed Accounts:', closedAccounts.value)
       } else {
-        console.warn('⚠️ Closed accounts not found')
+        console.warn('⚠️credit registry Closed accounts not found')
       }
 
       // derogatory accounts
@@ -250,7 +268,7 @@ const fetchCreditReport = async (creditReportId) => {
 
         console.log('✅credit registry Derogatory Accounts:', derogatoryAccounts.value)
       } else {
-        console.warn('⚠️ DerogatoryAccounts not found')
+        console.warn('⚠️credit registry DerogatoryAccounts not found')
       }
 
       // Written off accounts
@@ -275,7 +293,7 @@ const fetchCreditReport = async (creditReportId) => {
 
         console.log('✅credit registry writtenOffAccounts:', writtenOffAccounts.value)
       } else {
-        console.warn('⚠️ WrittenOffAccounts not found or invalid')
+        console.warn('⚠️credit registry WrittenOffAccounts not found or invalid')
       }
 
       // Unknown Accounts
@@ -300,7 +318,7 @@ const fetchCreditReport = async (creditReportId) => {
 
         console.log('✅credit registry unknownaccounts:', unknownAccounts.value)
       } else {
-        console.warn('⚠️ UnknownStatusAccounts not found or invalid')
+        console.warn('⚠️credit registry UnknownStatusAccounts not found or invalid')
       }
       // Inquiry History
       if (creditRegistryHistory.InquiryHistory?.length) {
@@ -311,10 +329,241 @@ const fetchCreditReport = async (creditReportId) => {
           reason: entry.Reason || 'N/A',
           raw: entry
         }))
-        console.log('✅ Inquiry History:', inquiryHistory.value)
+        console.log('✅credit registry Inquiry History:', inquiryHistory.value)
       }
     } else {
-      console.warn('⚠️ fcbc_credit_history is empty or invalid')
+      // Individual logic
+
+      // Personal Details
+      const rawPersonal = fcbcCreditHistory?.PersonalDetailsSummary
+      personal.value = Array.isArray(rawPersonal) && rawPersonal.length > 0 ? rawPersonal[0] : {}
+      console.log('✅FCBC Personal:', personal.value)
+
+      // Summary
+      const rawSummary = fcbcCreditHistory?.CreditAccountSummary
+      summary.value = Array.isArray(rawSummary) && rawSummary.length > 0 ? rawSummary[0] : {}
+      console.log('✅FCBC Summary:', summary.value)
+
+      // Credit Agreements
+      const rawCreditAgreementSummary = fcbcCreditHistory?.CreditAgreementSummary ?? []
+      creditAgreementSummary.value = rawCreditAgreementSummary.map((item) => ({
+        lender: item.SubscriberName,
+        date: moment(item.DateAccountOpened).format('DD/MM/YYYY'),
+        amount: parseFloat(item.OpeningBalanceAmt ?? '0'),
+        balance: parseFloat(item.CurrentBalanceAmt ?? '0'),
+        status: item.AccountStatus,
+
+        // Additional fields for dropdown
+        accountNo: item.AccountNo,
+        closedDate: item.ClosedDate,
+        duration: item.LoanDuration,
+        repaymentFrequency: item.RepaymentFrequency,
+        overdue: item.AmountOverdue,
+        instalment: item.InstalmentAmount,
+        performanceStatus: item.PerformanceStatus,
+        currency: item.Currency
+      }))
+
+      console.log('✅FCBC Credit Agreement Summary:', creditAgreementSummary.value)
+
+      // Enquiry history
+      const rawEnquiryHistoryTop = fcbcCreditHistory?.EnquiryHistoryTop ?? []
+      enquiryHistory.value = rawEnquiryHistoryTop.map((item) => ({
+        lender: item.SubscriberName,
+        date: moment(item.DateRequested).format('DD/MM/YYYY'),
+        rawDate: moment(item.LastUpdatedDate)
+      }))
+      console.log('✅FCBC Enquiry History:', enquiryHistory.value)
+
+      // Employment history
+      const rawEmploymentHistory = fcbcCreditHistory?.EmploymentHistory ?? []
+      employmentHistory.value = rawEmploymentHistory.map((item) => ({
+        employerName: item.EmployerDetail,
+        date: moment(item.UpdateDate).format('DD/MM/YYYY'),
+        rawDate: moment(item.UpdateDate)
+      }))
+      console.log('✅FCBC Employment History:', employmentHistory.value)
+
+      // Address history
+      const rawAddressHistory = fcbcCreditHistory?.AddressHistory ?? []
+      addressHistory.value = rawAddressHistory.map((item) => ({
+        address: [
+          item.CommercialAddress1,
+          item.CommercialAddress2,
+          item.CommercialAddress3,
+          item.CommercialAddress4
+        ]
+          .filter(Boolean)
+          .join(', '),
+        date: item.UpDateOnDate || '' // fallback if date is missing
+      }))
+      console.log('✅FCBC Address History:', addressHistory.value)
+
+      // credit registry
+
+      // performing accounts
+      if (creditRegistryHistory && Array.isArray(creditRegistryHistory.PerformingAccounts)) {
+        loanAccounts.value = creditRegistryHistory.PerformingAccounts.map((account) => ({
+          lender: account.CreditorName,
+          date: moment(account.Date_Opened).format('DD/MM/YYYY'),
+          amount: account.Credit_Limit || 0,
+          balance: account.Balance || 0,
+          status: account.Account_Status || 'Performing',
+          raw: account, // optional for future use
+
+          // Additional fields for dropdown
+          accountNo: account.Account_No,
+          closedDate: account.Balance_Date,
+          duration: account.Term,
+          repaymentFrequency: account.RepaymentFrequency,
+          overdue: account.AmountOverdue,
+          instalment: account.Minimum_Installment,
+          performanceStatus: account.Account_Status,
+          currency: account.Currency
+        }))
+
+        console.log('✅credit registry performing accounts:', loanAccounts.value)
+      } else {
+        console.warn('⚠️credit registry PerformingAccounts not found')
+      }
+      // Delinquents Accounts Mapping
+      if (Array.isArray(creditRegistryHistory.DelinquentAccounts)) {
+        delinquentAccounts.value = creditRegistryHistory.DelinquentAccounts.map((account) => ({
+          lender: account.CreditorName,
+          date: moment(account.Date_Opened).format('DD/MM/YYYY'),
+          amount: account.CredidelinquentAccountst_Limit || 0,
+          balance: account.Balance || 0,
+          status: account.Account_Status || 'Delinquent',
+          raw: account,
+
+          // Additional fields for dropdown
+          accountNo: account.Account_No,
+          closedDate: account.Balance_Date,
+          duration: account.Term,
+          repaymentFrequency: account.RepaymentFrequency,
+          overdue: account.AmountOverdue,
+          instalment: account.Minimum_Installment,
+          performanceStatus: account.Account_Status,
+          currency: account.Currency
+        }))
+
+        console.log('✅credit registry Delinquents Accounts:', delinquentAccounts.value)
+      } else {
+        console.warn('⚠️credit registry Delinquents accounts not found')
+      }
+
+      // Closed Accounts Mapping
+      if (Array.isArray(creditRegistryHistory.closedAccounts)) {
+        closedAccounts.value = creditRegistryHistory.ClosedAccounts.map((account) => ({
+          lender: account.CreditorName,
+          date: moment(account.Date_Opened).format('DD/MM/YYYY'),
+          amount: account.Credit_Limit || 0,
+          balance: account.Balance || 0,
+          status: account.Account_Status || 'closed',
+          raw: account,
+
+          // Additional fields for dropdown
+          accountNo: account.Account_No,
+          closedDate: account.Balance_Date,
+          duration: account.Term,
+          repaymentFrequency: account.RepaymentFrequency,
+          overdue: account.AmountOverdue,
+          instalment: account.Minimum_Installment,
+          performanceStatus: account.Account_Status,
+          currency: account.Currency
+        }))
+
+        console.log('✅credit registry Closed Accounts:', closedAccounts.value)
+      } else {
+        console.warn('⚠️credit registry Closed accounts not found')
+      }
+
+      // derogatory accounts
+      if (Array.isArray(creditRegistryHistory.DerogatoryAccounts)) {
+        derogatoryAccounts.value = creditRegistryHistory.DerogatoryAccounts.map((account) => ({
+          lender: account.CreditorName,
+          date: moment(account.Date_Opened).format('DD/MM/YYYY'),
+          amount: account.Credit_Limit || 0,
+          balance: account.Balance || 0,
+          status: account.Account_Status || 'Derogatory',
+          raw: account,
+
+          // Additional fields for dropdown
+          accountNo: account.Account_No,
+          closedDate: account.Balance_Date,
+          duration: account.Term,
+          repaymentFrequency: account.RepaymentFrequency,
+          overdue: account.AmountOverdue,
+          instalment: account.Minimum_Installment,
+          performanceStatus: account.Account_Status,
+          currency: account.Currency
+        }))
+
+        console.log('✅credit registry Derogatory Accounts:', derogatoryAccounts.value)
+      } else {
+        console.warn('⚠️credit registry DerogatoryAccounts not found')
+      }
+
+      // Written off accounts
+      if (creditRegistryHistory && Array.isArray(creditRegistryHistory.WrittenOffAccounts)) {
+        writtenOffAccounts.value = creditRegistryHistory.WrittenOffAccounts.map((account) => ({
+          lender: account.CreditorName || 'N/A',
+          date: moment(account.Date_Opened).format('DD/MM/YYYY'),
+          amount: account.Credit_Limit || 0,
+          balance: account.Balance || 0,
+          raw: account, // optional for future use
+
+          // Additional fields for dropdown
+          accountNo: account.Account_No,
+          closedDate: account.Balance_Date,
+          duration: account.Term,
+          repaymentFrequency: account.RepaymentFrequency,
+          overdue: account.AmountOverdue,
+          instalment: account.Minimum_Installment,
+          performanceStatus: account.Account_Status,
+          currency: account.Currency
+        }))
+
+        console.log('✅credit registry writtenOffAccounts:', writtenOffAccounts.value)
+      } else {
+        console.warn('⚠️credit registry WrittenOffAccounts not found or invalid')
+      }
+
+      // Unknown Accounts
+      if (creditRegistryHistory && Array.isArray(creditRegistryHistory.UnknownStatusAccounts)) {
+        unknownAccounts.value = creditRegistryHistory.UnknownStatusAccounts.map((account) => ({
+          lender: account.CreditorName || 'N/A',
+          date: moment(account.Date_Opened).format('DD/MM/YYYY'),
+          amount: account.Credit_Limit || 0,
+          balance: account.Balance || 0,
+          raw: account, // optional for future use
+
+          // Additional fields for dropdown
+          accountNo: account.Account_No,
+          closedDate: account.Balance_Date,
+          duration: account.Term,
+          repaymentFrequency: account.RepaymentFrequency,
+          overdue: account.AmountOverdue,
+          instalment: account.Minimum_Installment,
+          performanceStatus: account.Account_Status,
+          currency: account.Currency
+        }))
+
+        console.log('✅credit registry unknownaccounts:', unknownAccounts.value)
+      } else {
+        console.warn('⚠️credit registry UnknownStatusAccounts not found or invalid')
+      }
+      // Inquiry History
+      if (creditRegistryHistory.InquiryHistory?.length) {
+        inquiryHistory.value = creditRegistryHistory.InquiryHistory.map((entry) => ({
+          subscriber: entry.Subscriber || 'Unknown',
+          date: moment(entry.InquiryDate).format('DD/MM/YYYY'),
+          phone: entry.ContactPhone || 'N/A',
+          reason: entry.Reason || 'N/A',
+          raw: entry
+        }))
+        console.log('✅credit registry Inquiry History:', inquiryHistory.value)
+      }
     }
   } catch (error) {
     console.error('❌ Error fetching credit report:', error)
@@ -323,11 +572,36 @@ const fetchCreditReport = async (creditReportId) => {
   }
 }
 
-const expandedRow = ref(null)
+const expanded = ref([])
 
-const toggleRow = (index) => {
-  expandedRow.value = expandedRow.value === index ? null : index
+const toggleRow = (rowKey) => {
+  const index = expanded.value.indexOf(rowKey)
+  if (index !== -1) {
+    expanded.value.splice(index, 1)
+  } else {
+    expanded.value.push(rowKey)
+  }
 }
+
+const isExpanded = (rowKey) => expanded.value.includes(rowKey)
+const loanHeaders = [
+  { title: "Lender's Name", key: 'lender' },
+  { title: 'Disbursement Date', key: 'date' },
+  { title: 'Loan Amount', key: 'amount' },
+  { title: 'Loan Balance', key: 'balance' },
+  { title: 'Status', key: 'status' },
+  { title: 'Action', key: 'action', sortable: false }
+]
+
+const employmentHeaders = [
+  { title: 'Employer Name', key: 'employerName' },
+  { title: 'Date Updated', key: 'date' }
+]
+
+const addressHeaders = [
+  { text: 'Address', value: 'address' },
+  { text: 'Date Updated', value: 'date' }
+]
 
 // const loans = ref([
 //   {
@@ -392,7 +666,7 @@ onMounted(() => {
       <!-- Export Button aligned to the right -->
       <div>
         <v-btn
-         @click="reportRef?.exportPDF()"
+          @click="reportRef?.exportPDF()"
           no-uppercase
           size="small"
           class="normal-case p-4 bg-blue-600 hover:bg-blue-700 text-white text-none custom-btn"
@@ -414,7 +688,7 @@ onMounted(() => {
         <div v-if="!loading" :key="activeTab" class="space-y-6">
           <template v-if="activeTab === 'first_central'">
             <!-- // personal -->
-            <div class="bg-white p-6 rounded space-y-4">
+            <div v-if="idType !== 'business'" class="bg-white p-6 rounded space-y-4">
               <h2 class="text-md font-semibold mb-4">Personal details summary</h2>
 
               <!-- Check if `personal` has any data -->
@@ -469,6 +743,63 @@ onMounted(() => {
 
               <!-- Fallback message if no data -->
               <div v-else class="text-gray-500 text-sm italic">No personal data available.</div>
+            </div>
+
+            <div v-else>
+              <!-- BUSINESS INFORMATION SECTION -->
+              <div v-if="idType === 'business'" class="bg-white p-6 rounded space-y-4">
+                <h2 class="text-md font-semibold">Business Information</h2>
+                <div
+                  class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-8 text-sm text-gray-600"
+                >
+                  <div>
+                    <p class="mb-1">Business Name</p>
+                    <p class="font-bold text-gray-900">{{ businessData.BusinessName }}</p>
+                  </div>
+                  <div>
+                    <p class="mb-1">Date of Incorporation</p>
+                    <p class="font-bold text-gray-900">{{ businessData.DateOfIncorporation }}</p>
+                  </div>
+                  <div>
+                    <p class="mb-1">Business Address</p>
+                    <p class="font-bold text-gray-900">
+                      {{ businessData.CommercialAddress1 }}, {{ businessData.CommercialAddress2 }},
+                      {{ businessData.CommercialAddress4 }}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- DIRECTOR INFORMATION TABLE -->
+              <div v-if="idType === 'business'" class="bg-white p-6 rounded space-y-4">
+                <h2 class="text-md font-semibold">Director Information</h2>
+
+                <div v-if="directors.length > 0">
+                  <table class="min-w-full text-sm text-left">
+                    <thead class="text-xs font-semibold text-gray-700">
+                      <tr>
+                        <th class="p-2">First Name</th>
+                        <th class="p-2">Other Names</th>
+                        <th class="p-2">Surname</th>
+                        <th class="p-2">Identification Number</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(director, index) in directors" :key="index" class="">
+                        <td class="p-2 font-bold text-gray-900">{{ director.firstName }}</td>
+                        <td class="p-2 font-bold text-gray-900">{{ director.othernames }}</td>
+                        <td class="p-2 font-bold text-gray-900">{{ director.surname }}</td>
+                        <td class="p-2 font-bold text-gray-900">
+                          {{ director.Identificationnumber }}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div v-else class="text-sm text-gray-500 italic">
+                  No director information available.
+                </div>
+              </div>
             </div>
 
             <!-- Summary -->
@@ -532,70 +863,52 @@ onMounted(() => {
               <h2 class="text-md font-semibold mb-4">Loan Accounts</h2>
 
               <div v-if="creditAgreementSummary && creditAgreementSummary.length > 0">
-                <table class="min-w-full text-left">
-                  <thead>
-                    <tr class="bg-gray-100 text-sm">
-                      <th class="p-2">Lender's Name</th>
-                      <th class="p-2">Disbursement Date</th>
-                      <th class="p-2">Loan Amount</th>
-                      <th class="p-2">Loan Balance</th>
-                      <th class="p-2">Status</th>
-                      <th class="p-2">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <template v-for="(loan, index) in creditAgreementSummary" :key="index">
-                      <!-- Main Row -->
-                      <tr class="text-sm border-b">
-                        <td class="p-2">{{ loan.lender }}</td>
-                        <td class="p-2">{{ loan.disbursementDate }}</td>
-                        <td class="p-2">₦{{ loan.loanAmount.toLocaleString() }}</td>
-                        <td class="p-2">₦{{ loan.loanBalance.toLocaleString() }}</td>
-                        <td class="p-2">
-                          <span
-                            :class="
-                              loan.status === 'Closed'
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-red-100 text-red-800'
-                            "
-                            class="px-2 py-1 rounded text-xs"
-                          >
-                            {{ loan.status }}
-                          </span>
-                        </td>
-                        <td class="p-2">
-                          <button
-                            @click="toggleRow(index)"
-                            class="bg-blue-600 text-white text-xs px-3 py-1 rounded hover:bg-blue-700"
-                          >
-                            View
-                          </button>
-                        </td>
-                      </tr>
+                <v-data-table
+                  :headers="loanHeaders"
+                  :items="creditAgreementSummary"
+                  item-value="accountNo"
+                  class="elevation-1"
+                  fixed-header
+                  height="400"
+                  show-expand
+                  hide-default-footer
+                  :expanded.sync="expanded"
+                >
+                  <!-- Default item row -->
+                  <template #item.status="{ item }">
+                    <v-chip
+                      :color="item.status === 'Closed' ? 'green' : 'red'"
+                      variant="tonal"
+                      size="small"
+                      class="text-white"
+                    >
+                      {{ item.status }}
+                    </v-chip>
+                  </template>
 
-                      <!-- Dropdown Details Row -->
-                      <tr v-if="expandedRow === index" class="bg-gray-50">
-                        <td colspan="6" class="p-4">
-                          <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                            <p><strong>Account number:</strong> {{ loan.accountNo }}</p>
-                            <p><strong>Loan Amount:</strong> ₦{{ loan.loanAmount }}</p>
-                            <p><strong>Current Balance:</strong> ₦{{ loan.loanBalance }}</p>
-                            <p><strong>Amount Overdue:</strong> ₦{{ loan.amountOverdue }}</p>
-                            <p><strong>Instalment Amount:</strong> ₦{{ loan.instalmentAmount }}</p>
-                            <p><strong>Loan Duration:</strong> {{ loan.loanDuration }} months</p>
-                            <p>
-                              <strong>Repayment Frequency:</strong> {{ loan.repaymentFrequency }}
-                            </p>
-                            <p><strong>Date Account Opened:</strong> {{ loan.dateOpened }}</p>
-                            <p><strong>Closed Date:</strong> {{ loan.closedDate }}</p>
-                            <p><strong>Performance Status:</strong> {{ loan.performanceStatus }}</p>
-                            <p><strong>Account Status:</strong> {{ loan.status }}</p>
-                          </div>
-                        </td>
-                      </tr>
-                    </template>
-                  </tbody>
-                </table>
+                  <template #item.action="{ index }">
+                    <v-btn size="small" color="primary" @click="toggleRow(index)">View</v-btn>
+                  </template>
+
+                  <!-- Expanded content -->
+                  <template #expanded-row="{ item }">
+                    <td :colspan="loanHeaders.length" class="px-4 py-2 bg-gray-50">
+                      <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                        <p><strong>Account number:</strong> {{ item.accountNo }}</p>
+                        <p><strong>Loan Amount:</strong> ₦{{ item.loanAmount }}</p>
+                        <p><strong>Current Balance:</strong> ₦{{ item.loanBalance }}</p>
+                        <p><strong>Amount Overdue:</strong> ₦{{ item.amountOverdue }}</p>
+                        <p><strong>Instalment Amount:</strong> ₦{{ item.instalmentAmount }}</p>
+                        <p><strong>Loan Duration:</strong> {{ item.loanDuration }} months</p>
+                        <p><strong>Repayment Frequency:</strong> {{ item.repaymentFrequency }}</p>
+                        <p><strong>Date Account Opened:</strong> {{ item.dateOpened }}</p>
+                        <p><strong>Closed Date:</strong> {{ item.closedDate }}</p>
+                        <p><strong>Performance Status:</strong> {{ item.performanceStatus }}</p>
+                        <p><strong>Account Status:</strong> {{ item.status }}</p>
+                      </div>
+                    </td>
+                  </template>
+                </v-data-table>
               </div>
 
               <div v-else class="text-sm text-gray-500 italic">No loan accounts available.</div>
@@ -629,24 +942,17 @@ onMounted(() => {
               <div class="bg-white rounded p-4">
                 <h2 class="font-semibold text-md mb-4">Employment History</h2>
                 <div v-if="employmentHistory && employmentHistory.length > 0">
-                  <table class="w-full text-sm text-left">
-                    <thead class="bg-gray-100">
-                      <tr>
-                        <th class="p-2">Employer Name</th>
-                        <th class="p-2">Date Updated</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr
-                        v-for="(employment, index) in employmentHistory"
-                        :key="index"
-                        class="border-b"
-                      >
-                        <td class="p-2">{{ employment.employerName }}</td>
-                        <td class="p-2">{{ employment.date }}</td>
-                      </tr>
-                    </tbody>
-                  </table>
+                  <v-data-table
+                    :headers="employmentHeaders"
+                    :items="employmentHistory"
+                    class="elevation-1"
+                    fixed-header
+                    height="400"
+                  >
+                    <template #item.date="{ item }">
+                      {{ item.date }}
+                    </template>
+                  </v-data-table>
                 </div>
                 <div v-else class="text-sm text-gray-500 italic">
                   No employment history available.
@@ -658,20 +964,22 @@ onMounted(() => {
             <div class="bg-white rounded p-4">
               <h2 class="font-semibold text-md mb-4">Address History</h2>
               <div v-if="addressHistory && addressHistory.length > 0">
-                <table class="w-full text-sm text-left">
-                  <thead class="bg-gray-100">
-                    <tr>
-                      <th class="p-2">Address</th>
-                      <th class="p-2">Date Updated</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="(address, index) in addressHistory" :key="index" class="border-b">
-                      <td class="p-2">{{ address.address }}</td>
-                      <td class="p-2">{{ address.date }}</td>
-                    </tr>
-                  </tbody>
-                </table>
+                <div class="overflow-auto max-h-72 border rounded">
+                  <table class="min-w-full text-sm text-left">
+                    <thead class="bg-gray-100 sticky top-0 z-10">
+                      <tr>
+                        <th class="p-3 font-medium text-gray-700">Address</th>
+                        <th class="p-3 font-medium text-gray-700">Date Updated</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                      <tr v-for="(address, index) in addressHistory" :key="index">
+                        <td class="p-3 text-gray-800">{{ address.address }}</td>
+                        <td class="p-3 text-gray-800">{{ address.date }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
               <div v-else class="text-sm text-gray-500 italic">No address history available.</div>
             </div>
@@ -949,24 +1257,23 @@ onMounted(() => {
     </div>
 
     <div class="hidden">
-       <CreditReportExport
-         ref="reportRef"
-      :personal="personal"
-      :summary="summary"
-      :credit-agreement-summary="creditAgreementSummary"
-      :enquiry-history="enquiryHistory"
-      :employment-history="employmentHistory"
-      :address-history="addressHistory"
-      :loan-accounts="loanAccounts"
-      :delinquent-accounts="delinquentAccounts"
-      :closed-accounts="closedAccounts"
-      :derogatory-accounts="derogatoryAccounts"
-      :written-off-accounts="writtenOffAccounts"
-      :unknown-accounts="unknownAccounts"
-      :inquiry-history="inquiryHistory"
-    />
+      <!-- <CreditReportExport
+        ref="reportRef"
+        :personal="personal"
+        :summary="summary"
+        :credit-agreement-summary="creditAgreementSummary"
+        :enquiry-history="enquiryHistory"
+        :employment-history="employmentHistory"
+        :address-history="addressHistory"
+        :loan-accounts="loanAccounts"
+        :delinquent-accounts="delinquentAccounts"
+        :closed-accounts="closedAccounts"
+        :derogatory-accounts="derogatoryAccounts"
+        :written-off-accounts="writtenOffAccounts"
+        :unknown-accounts="unknownAccounts"
+        :inquiry-history="inquiryHistory"
+      /> -->
     </div>
-   
   </MainLayout>
 </template>
 

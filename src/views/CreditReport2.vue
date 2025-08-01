@@ -18,8 +18,6 @@ const tabs = [
 const fetchCreditReport = async (creditReportId) => {
   const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
 
-  console.log(savedAuth)
-
   const token = savedAuth ? savedAuth?.token : computed(() => authStore.token)?.value
 
   const tenantId = savedAuth
@@ -28,8 +26,6 @@ const fetchCreditReport = async (creditReportId) => {
       : savedAuth.user?.tenant_id
     : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
         ?.value
-
-  console.log('tenant id:', tenantId)
 
   const apiUrl = `https://staging.getjupita.com/api/${tenantId}/get-credit-check-key?unique_key=${creditReportId}`
   loading.value = true
@@ -42,53 +38,260 @@ const fetchCreditReport = async (creditReportId) => {
       }
     })
 
-    console.log('response of credit report:', response.data.data)
-    const report = response.data.data;
-    const accountData = report.credit_registry_history?.AccountData;
+    const report = response.data.data
+    console.log('🟢 Full Report:', report)
 
-    // Replace mock data with actual response values
-    loanAccounts.value = [
-      ...(accountData.PerformingAccounts || []),
-      ...(accountData.DelinquentAccounts || []),
-      ...(accountData.ClosedAccounts || []),
-      ...(accountData.DerogatoryAccounts || []),
-      ...(accountData.WrittenOffAccounts || []),
-      ...(accountData.UnknownStatusAccounts || [])
-    ].map(account => ({
-      lender: account.CreditorName || 'Unknown',
-      date: account.OpenedDate || 'N/A',
-      amount: `₦${Number(account.CreditAmount || 0).toLocaleString()}`,
-      balance: `₦${Number(account.OutstandingAmount || 0).toLocaleString()}`,
-      status: account.AccountStatus || 'Unknown'
-    }));
+    const creditHistory = report?.credit_history
+    const idType = creditHistory?.idType
+    if (!creditHistory) {
+      console.warn('❌ credit_history missing in response')
+      return
+    }
 
-    inquiryHistory.value = (accountData.InquiryHistory || []).map(entry => ({
-      subscriber: entry.SubscriberName || 'Unknown',
-      date: entry.InquiryDate || 'N/A',
-      phone: entry.SubscriberPhone || '',
-      reason: entry.Reason || 'N/A'
-    }));
+    const rawFcbc = creditHistory?.fcbc_credit_history
+    const crnCreditHistory = creditHistory?.crn_credit_history
+    const creditRegistryHistory = creditHistory?.credit_registry_history.AccountData
+    console.log('✅ FCBC (array)Data:', rawFcbc)
+    console.log('✅ CRN credit History Data:', crnCreditHistory)
+    console.log('✅ Credit Registry History Data:', creditRegistryHistory)
 
-    summary.value = {
-      totalMonthlyInstallment: 0,
-      totalCreditFacilities: loanAccounts.value.length,
-      totalOpenFacilities: loanAccounts.value.filter(a => a.status.toLowerCase() === 'open').length,
-      totalCreditAmount: loanAccounts.value.reduce((sum, acc) => sum + Number(acc.amount.replace(/[₦,]/g, '')), 0),
-      outstandingDebts: loanAccounts.value.reduce((sum, acc) => sum + Number(acc.balance.replace(/[₦,]/g, '')), 0),
-      closedFacilities: loanAccounts.value.filter(a => a.status.toLowerCase() === 'closed').length,
-      accountsInArrears: accountData.DelinquentAccounts?.length || 0,
-      delinquentFacilities: accountData.DelinquentAccounts?.length || 0,
-      writtenOffFacilities: accountData.WrittenOffAccounts?.length || 0
-    };
+    if (Array.isArray(rawFcbc) && rawFcbc.length > 0) {
+      const fcbcCreditHistory = mergeFcbcArray(rawFcbc)
+      console.log('✅ Merged FCBC Object:', fcbcCreditHistory)
 
-    // Optional: update addressHistory, employmentHistory, personal if data is available elsewhere in the response
+      // Personal Details
+      const rawPersonal = fcbcCreditHistory?.PersonalDetailsSummary
+      personal.value = Array.isArray(rawPersonal) && rawPersonal.length > 0 ? rawPersonal[0] : {}
+      console.log('✅FCBC Personal:', personal.value)
 
-    console.log('Mapped loanAccounts:', loanAccounts.value);
-    console.log('Mapped inquiryHistory:', inquiryHistory.value);
-    console.log('Updated summary:', summary.value);
+      // Summary
+      const rawSummary = fcbcCreditHistory?.CreditAccountSummary
+      summary.value = Array.isArray(rawSummary) && rawSummary.length > 0 ? rawSummary[0] : {}
+      console.log('✅FCBC Summary:', summary.value)
 
+      // Credit Agreements
+      // Credit Agreements
+      const rawCreditAgreementSummary = fcbcCreditHistory?.CreditAgreementSummary ?? []
+      creditAgreementSummary.value = rawCreditAgreementSummary.map((item) => ({
+        lender: item.SubscriberName,
+        date: moment(item.DateAccountOpened).format('DD/MM/YYYY'),
+        rawDate: moment(item.LastUpdatedDate),
+        amount: parseFloat(item.OpeningBalanceAmt ?? '0'),
+        balance: parseFloat(item.CurrentBalanceAmt ?? '0'),
+        status: item.AccountStatus,
+
+        // Additional fields for dropdown
+        accountNo: item.AccountNo,
+        closedDate: item.ClosedDate,
+        duration: item.LoanDuration,
+        repaymentFrequency: item.RepaymentFrequency,
+        overdue: item.AmountOverdue,
+        instalment: item.InstalmentAmount,
+        performanceStatus: item.PerformanceStatus,
+        currency: item.Currency
+      }))
+
+      console.log('✅FCBC Credit Agreement Summary:', creditAgreementSummary.value)
+
+      // Enquiry history
+      const rawEnquiryHistoryTop = fcbcCreditHistory?.EnquiryHistoryTop ?? []
+      enquiryHistory.value = rawEnquiryHistoryTop.map((item) => ({
+        lender: item.SubscriberName,
+        date: moment(item.DateRequested).format('DD/MM/YYYY'),
+        rawDate: moment(item.LastUpdatedDate)
+      }))
+      console.log('✅FCBC Enquiry History:', enquiryHistory.value)
+
+      // Employment history
+      const rawEmploymentHistory = fcbcCreditHistory?.EmploymentHistory ?? []
+      employmentHistory.value = rawEmploymentHistory.map((item) => ({
+        employerName: item.EmployerDetail,
+        date: moment(item.UpdateDate).format('DD/MM/YYYY'),
+        rawDate: moment(item.UpdateDate)
+      }))
+      console.log('✅FCBC Employment History:', employmentHistory.value)
+
+      // Address history
+      const rawAddressHistory = fcbcCreditHistory?.AddressHistory ?? []
+      addressHistory.value = rawAddressHistory.map((item) => ({
+        address: item.Address1,
+        date: moment(item.UpdateDate).format('DD/MM/YYYY'),
+        rawDate: moment(item.UpdateDate)
+      }))
+      console.log('✅FCBC Address History:', addressHistory.value)
+
+      // credit registry
+
+      // performing accounts
+      if (creditRegistryHistory && Array.isArray(creditRegistryHistory.PerformingAccounts)) {
+        loanAccounts.value = creditRegistryHistory.PerformingAccounts.map((account) => ({
+          lender: account.CreditorName,
+          date: moment(account.Date_Opened).format('DD/MM/YYYY'),
+          amount: account.Credit_Limit || 0,
+          balance: account.Balance || 0,
+          status: account.Account_Status || 'Performing',
+          raw: account, // optional for future use
+
+          // Additional fields for dropdown
+          accountNo: account.Account_No,
+          closedDate: account.Balance_Date,
+          duration: account.Term,
+          repaymentFrequency: account.RepaymentFrequency,
+          overdue: account.AmountOverdue,
+          instalment: account.Minimum_Installment,
+          performanceStatus: account.Account_Status,
+          currency: account.Currency
+        }))
+
+        console.log('✅credit registry performing accounts:', loanAccounts.value)
+      } else {
+        console.warn('⚠️ PerformingAccounts not found')
+      }
+      // Delinquents Accounts Mapping
+      if (Array.isArray(creditRegistryHistory.DelinquentAccounts)) {
+        delinquentAccounts.value = creditRegistryHistory.DelinquentAccounts.map((account) => ({
+          lender: account.CreditorName,
+          date: moment(account.Date_Opened).format('DD/MM/YYYY'),
+          amount: account.CredidelinquentAccountst_Limit || 0,
+          balance: account.Balance || 0,
+          status: account.Account_Status || 'Delinquent',
+          raw: account,
+
+          // Additional fields for dropdown
+          accountNo: account.Account_No,
+          closedDate: account.Balance_Date,
+          duration: account.Term,
+          repaymentFrequency: account.RepaymentFrequency,
+          overdue: account.AmountOverdue,
+          instalment: account.Minimum_Installment,
+          performanceStatus: account.Account_Status,
+          currency: account.Currency
+        }))
+
+        console.log('✅credit registry Delinquents Accounts:', delinquentAccounts.value)
+      } else {
+        console.warn('⚠️ Delinquents accounts not found')
+      }
+
+      // Closed Accounts Mapping
+      if (Array.isArray(creditRegistryHistory.closedAccounts)) {
+        closedAccounts.value = creditRegistryHistory.ClosedAccounts.map((account) => ({
+          lender: account.CreditorName,
+          date: moment(account.Date_Opened).format('DD/MM/YYYY'),
+          amount: account.Credit_Limit || 0,
+          balance: account.Balance || 0,
+          status: account.Account_Status || 'closed',
+          raw: account,
+
+          // Additional fields for dropdown
+          accountNo: account.Account_No,
+          closedDate: account.Balance_Date,
+          duration: account.Term,
+          repaymentFrequency: account.RepaymentFrequency,
+          overdue: account.AmountOverdue,
+          instalment: account.Minimum_Installment,
+          performanceStatus: account.Account_Status,
+          currency: account.Currency
+        }))
+
+        console.log('✅credit registry Closed Accounts:', closedAccounts.value)
+      } else {
+        console.warn('⚠️ Closed accounts not found')
+      }
+
+      // derogatory accounts
+      if (Array.isArray(creditRegistryHistory.DerogatoryAccounts)) {
+        derogatoryAccounts.value = creditRegistryHistory.DerogatoryAccounts.map((account) => ({
+          lender: account.CreditorName,
+          date: moment(account.Date_Opened).format('DD/MM/YYYY'),
+          amount: account.Credit_Limit || 0,
+          balance: account.Balance || 0,
+          status: account.Account_Status || 'Derogatory',
+          raw: account,
+
+          // Additional fields for dropdown
+          accountNo: account.Account_No,
+          closedDate: account.Balance_Date,
+          duration: account.Term,
+          repaymentFrequency: account.RepaymentFrequency,
+          overdue: account.AmountOverdue,
+          instalment: account.Minimum_Installment,
+          performanceStatus: account.Account_Status,
+          currency: account.Currency
+        }))
+
+        console.log('✅credit registry Derogatory Accounts:', derogatoryAccounts.value)
+      } else {
+        console.warn('⚠️ DerogatoryAccounts not found')
+      }
+
+      // Written off accounts
+      if (creditRegistryHistory && Array.isArray(creditRegistryHistory.WrittenOffAccounts)) {
+        writtenOffAccounts.value = creditRegistryHistory.WrittenOffAccounts.map((account) => ({
+          lender: account.CreditorName || 'N/A',
+          date: moment(account.Date_Opened).format('DD/MM/YYYY'),
+          amount: account.Credit_Limit || 0,
+          balance: account.Balance || 0,
+          raw: account, // optional for future use
+
+          // Additional fields for dropdown
+          accountNo: account.Account_No,
+          closedDate: account.Balance_Date,
+          duration: account.Term,
+          repaymentFrequency: account.RepaymentFrequency,
+          overdue: account.AmountOverdue,
+          instalment: account.Minimum_Installment,
+          performanceStatus: account.Account_Status,
+          currency: account.Currency
+        }))
+
+        console.log('✅credit registry writtenOffAccounts:', writtenOffAccounts.value)
+      } else {
+        console.warn('⚠️ WrittenOffAccounts not found or invalid')
+      }
+
+      // Unknown Accounts
+      if (creditRegistryHistory && Array.isArray(creditRegistryHistory.UnknownStatusAccounts)) {
+        unknownAccounts.value = creditRegistryHistory.UnknownStatusAccounts.map((account) => ({
+          lender: account.CreditorName || 'N/A',
+          date: moment(account.Date_Opened).format('DD/MM/YYYY'),
+          amount: account.Credit_Limit || 0,
+          balance: account.Balance || 0,
+          raw: account, // optional for future use
+
+          // Additional fields for dropdown
+          accountNo: account.Account_No,
+          closedDate: account.Balance_Date,
+          duration: account.Term,
+          repaymentFrequency: account.RepaymentFrequency,
+          overdue: account.AmountOverdue,
+          instalment: account.Minimum_Installment,
+          performanceStatus: account.Account_Status,
+          currency: account.Currency
+        }))
+
+        console.log('✅credit registry unknownaccounts:', unknownAccounts.value)
+      } else {
+        console.warn('⚠️ UnknownStatusAccounts not found or invalid')
+      }
+      // Inquiry History
+      if (creditRegistryHistory.InquiryHistory?.length) {
+        inquiryHistory.value = creditRegistryHistory.InquiryHistory.map((entry) => ({
+          subscriber: entry.Subscriber || 'Unknown',
+          date: moment(entry.InquiryDate).format('DD/MM/YYYY'),
+          phone: entry.ContactPhone || 'N/A',
+          reason: entry.Reason || 'N/A',
+          raw: entry
+        }))
+        console.log('✅ Inquiry History:', inquiryHistory.value)
+      }
+    } else {
+      console.warn('⚠️ fcbc_credit_history is empty or invalid')
+    }
   } catch (error) {
-    console.log('error fetching credit report:', error.response.data)
+    console.error('❌ Error fetching credit report:', error)
+  } finally {
+    loading.value = false
   }
 }
 
@@ -633,49 +836,45 @@ onMounted(() => {
                 <div>
                   <p class="mb-1">Total active monthly installment</p>
                   <p class="font-bold text-gray-900">
-                    ₦{{ reportData.summary.monthlyInstallment }}
                   </p>
                 </div>
                 <div>
                   <p class="mb-1">Total no of credit facilities</p>
-                  <p class="font-bold text-gray-900">{{ reportData.summary.noOfFacilities }}</p>
+                  <p class="font-bold text-gray-900"></p>
                 </div>
                 <div>
                   <p class="mb-1">Total no of open facilities</p>
-                  <p class="font-bold text-gray-900">{{ reportData.summary.openFacilities }}</p>
+                  <p class="font-bold text-gray-900"></p>
                 </div>
 
                 <!-- Row 2 -->
                 <div>
                   <p class="mb-1">Total arrear amount</p>
-                  <p class="font-bold text-gray-900">₦{{ reportData.summary.arrearAmount }}</p>
+                  <p class="font-bold text-gray-900">₦</p>
                 </div>
                 <div>
                   <p class="mb-1">Total outstanding debts</p>
-                  <p class="font-bold text-gray-900">{{ reportData.summary.outstandingDebts }}</p>
+                  <p class="font-bold text-gray-900"></p>
                 </div>
                 <div>
                   <p class="mb-1">Total no of closed credit facilities</p>
-                  <p class="font-bold text-gray-900">{{ reportData.summary.closedFacilities }}</p>
+                  <p class="font-bold text-gray-900"></p>
                 </div>
 
                 <!-- Row 3 -->
                 <div>
                   <p class="mb-1">Total no of account in arrears</p>
                   <p class="font-bold text-gray-900">
-                    {{ reportData.summary.noOfAccountsInArrears }}
                   </p>
                 </div>
                 <div>
                   <p class="mb-1">Total no of delinquent facilities</p>
                   <p class="font-bold text-gray-900">
-                    {{ reportData.summary.noOfDelinquentFacilities }}
                   </p>
                 </div>
                 <div>
                   <p class="mb-1">Total no written off facilities</p>
                   <p class="font-bold text-gray-900">
-                    {{ reportData.summary.writtenOffFacilities }}
                   </p>
                 </div>
               </div>

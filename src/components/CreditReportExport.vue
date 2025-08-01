@@ -129,7 +129,6 @@
                 <th class="p-2">Loan Amount</th>
                 <th class="p-2">Loan Balance</th>
                 <th class="p-2">Status</th>
-                <th class="p-2">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -285,7 +284,6 @@
                 <th class="p-2">Loan Amount</th>
                 <th class="p-2">Loan Balance</th>
                 <th class="p-2">Status</th>
-                <th class="p-2">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -308,14 +306,7 @@
                       {{ loan.status }}
                     </span>
                   </td>
-                  <td class="p-2">
-                    <button
-                      @click="toggleRow(index)"
-                      class="bg-blue-600 text-white text-xs px-3 py-1 rounded hover:bg-blue-700"
-                    >
-                      View
-                    </button>
-                  </td>
+                 
                 </tr>
 
                 <!-- Dropdown Details Row -->
@@ -372,11 +363,7 @@
               <td class="p-3 border-b">{{ loan.date }}</td>
               <td class="p-3 border-b">₦{{ loan.amount.toLocaleString() }}</td>
               <td class="p-3 border-b">₦{{ loan.balance.toLocaleString() }}</td>
-              <td class="p-3 border-b">
-                <button class="bg-red-600 text-white text-xs px-3 py-1 rounded hover:bg-red-700">
-                  View
-                </button>
-              </td>
+              
             </tr>
           </tbody>
         </table>
@@ -410,11 +397,7 @@
               <td class="p-3 border-b">{{ loan.date }}</td>
               <td class="p-3 border-b">₦{{ loan.amount.toLocaleString() }}</td>
               <td class="p-3 border-b">₦{{ loan.balance.toLocaleString() }}</td>
-              <td class="p-3 border-b">
-                <button class="bg-red-600 text-white text-xs px-3 py-1 rounded hover:bg-red-700">
-                  View
-                </button>
-              </td>
+              
             </tr>
           </tbody>
         </table>
@@ -431,7 +414,6 @@
                 <th class="p-2">Disbursement Date</th>
                 <th class="p-2">Loan Amount</th>
                 <th class="p-2">Loan Balance</th>
-                <th class="p-2">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -440,13 +422,7 @@
                 <td class="p-2">{{ item.date }}</td>
                 <td class="p-2">₦{{ item.amount.toLocaleString() }}</td>
                 <td class="p-2">₦{{ item.balance.toLocaleString() }}</td>
-                <td class="p-2">
-                  <button
-                    class="bg-blue-600 text-white text-xs px-3 py-1 rounded hover:bg-blue-700"
-                  >
-                    View
-                  </button>
-                </td>
+                
               </tr>
             </tbody>
           </table>
@@ -465,7 +441,6 @@
                 <th class="p-2">Disbursement Date</th>
                 <th class="p-2">Loan Amount</th>
                 <th class="p-2">Loan Balance</th>
-                <th class="p-2">Action</th>
               </tr>
             </thead>
             <tbody>
