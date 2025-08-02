@@ -23,6 +23,7 @@ jobs:
           npm ci
           cp .env.staging .env
           npm run build
+          echo 'staging.app.getjupita.com' > dist/CNAME
 
       - name: Deploy to gh-pages-staging
         uses: peaceiris/actions-gh-pages@v3
