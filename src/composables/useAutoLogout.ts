@@ -9,7 +9,6 @@ export function useAutoLogout(timeout = 15 * 60 * 1000) {
 
   const logout = () => {
     localStorage.removeItem('data')
-    authStore.clearAuthData() // implement this method in your store
     router.push('/')
   }
 
