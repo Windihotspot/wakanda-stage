@@ -697,7 +697,7 @@ const exportPDF = () => {
   // ✅ Show loading message
   const loadingMessage = ElMessage({
     message: 'Downloading report...',
-    type: 'info',
+    type: 'warning',
     duration: 0, // stays until closed
     showClose: false
   })

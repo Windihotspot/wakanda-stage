@@ -8,16 +8,17 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 18
 
-      - name: Install and Build
+      - name: Install dependencies and build
         run: |
           npm ci
           cp .env.staging .env
@@ -26,7 +27,8 @@ jobs:
       - name: Deploy to gh-pages-staging
         uses: peaceiris/actions-gh-pages@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          personal_token: ${{ secrets.STAGING_DEPLOY_TOKEN }}  # ✅ use your PAT here
+          external_repository: Windihotspot/wakanda       # ✅ if pushing to same repo, you can remove this line
           publish_branch: gh-pages-staging
           publish_dir: ./dist
           cname: staging.app.getjupita.com

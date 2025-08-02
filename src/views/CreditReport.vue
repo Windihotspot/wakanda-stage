@@ -102,7 +102,7 @@ const fcbcEnquiryHistoryTopCount = ref(0)
 
 const fetchCreditReport = async (creditReportId) => {
   const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
-a
+
   const token = savedAuth ? savedAuth?.token : computed(() => authStore.token)?.value
 
   const tenantId = savedAuth

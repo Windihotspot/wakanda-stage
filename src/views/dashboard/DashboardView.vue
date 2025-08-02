@@ -30,7 +30,6 @@ const closeModal = () => {
 const fetchStatements = async () => {
   const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
 
-console.log(savedAuth);
 
 const token = savedAuth
   ? savedAuth?.token
