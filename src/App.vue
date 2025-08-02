@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
+import { useAutoLogout } from '@/composables/useAutoLogout'
+
+useAutoLogout() 
 </script>
 
 <template>
