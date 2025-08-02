@@ -2,7 +2,6 @@ import { createRouter, createWebHistory } from 'vue-router'
 import VerifiedEmail from '@/views/VerifiiedEmail.vue'
 import DashboardView from '@/views/dashboard/DashboardView.vue'
 import Login from '@/views/Login.vue'
-import SignUp from '@/views/SignUp.vue'
 import Wallet from '@/views/Wallet.vue'
 import Settings from '@/views/Settings.vue'
 import Analysis from '@/views/Analysis.vue'
@@ -20,11 +19,6 @@ const router = createRouter({
       path: '/',
       name: 'login',
       component: Login
-    },
-    {
-      path: '/signup',
-      name: 'signup',
-      component: SignUp
     },
     {
       path: '/verified',
