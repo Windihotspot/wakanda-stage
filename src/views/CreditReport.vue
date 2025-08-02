@@ -86,6 +86,20 @@ const mergeFcbcArray = (arr) => {
   return result
 }
 
+// FCBC section counts (for use in template)
+const fcbcSubjectListCount = ref(0)
+const fcbcBusinessDataCount = ref(0)
+const fcbcHighestDelinquencyRatingCount = ref(0)
+const fcbcFacilityPerformanceSummaryCount = ref(0)
+const fcbcDirectorInformationCount = ref(0)
+const fcbcAccountMonthlyPaymentHistoryCount = ref(0)
+const fcbcAccountMonthlyPaymentHistoryHeaderCount = ref(0)
+const fcbcAdditionalContactHistoryCount = ref(0)
+const fcbcAddressHistoryCount = ref(0)
+const fcbcCreditAgreementSummaryCount = ref(0)
+const fcbcEnquiryDetailsCount = ref(0)
+const fcbcEnquiryHistoryTopCount = ref(0)
+
 const fetchCreditReport = async (creditReportId) => {
   const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
 
@@ -127,6 +141,17 @@ const fetchCreditReport = async (creditReportId) => {
     console.log('✅ Merged FCBC Object:', fcbcCreditHistory)
 
     if (idType.value === 'business') {
+      fcbcHighestDelinquencyRatingCount.value = Array.isArray(
+        fcbcCreditHistory.HighestDelinquencyRating
+      )
+        ? fcbcCreditHistory.HighestDelinquencyRating.length
+        : 0
+
+      fcbcCreditAgreementSummaryCount.value = Array.isArray(
+        fcbcCreditHistory.CreditAgreementSummary
+      )
+        ? fcbcCreditHistory.CreditAgreementSummary.length
+        : 0
       // Business specific extraction
       const businessDataArray = fcbcCreditHistory?.BusinessData || []
       const directorInfoArray = fcbcCreditHistory?.DirectorInformation || []
@@ -134,8 +159,8 @@ const fetchCreditReport = async (creditReportId) => {
       businessData.value = businessDataArray[0] || {}
       directors.value = directorInfoArray
 
-      console.log('✅ BusinessData:', businessData.value)
-      console.log('✅ Directors:', directors.value)
+      console.log('✅FCBC BusinessData:', businessData.value)
+      console.log('✅FCBC Directors:', directors.value)
 
       // Summary
       const rawSummary = fcbcCreditHistory?.CreditAccountSummary
@@ -154,7 +179,7 @@ const fetchCreditReport = async (creditReportId) => {
 
         // Additional fields for dropdown
         accountNo: item.AccountNo,
-        closedDate: item.ClosedDate,
+        closedDate: moment(item.ClosedDate).format('DD/MM/YYYY'),
         duration: item.LoanDuration,
         repaymentFrequency: item.RepaymentFrequency,
         overdue: formatNaira(item.AmountOverdue),
@@ -167,12 +192,20 @@ const fetchCreditReport = async (creditReportId) => {
 
       // Enquiry history
       const rawEnquiryHistoryTop = fcbcCreditHistory?.EnquiryHistoryTop ?? []
-      enquiryHistory.value = rawEnquiryHistoryTop.map((item) => ({
-        lender: item.SubscriberName,
-        date: moment(item.DateRequested).format('DD/MM/YYYY'),
-        rawDate: moment(item.LastUpdatedDate)
-      }))
-      console.log('✅FCBC Enquiry History:', enquiryHistory.value)
+
+      enquiryHistory.value = rawEnquiryHistoryTop
+        .filter((item) => {
+          const lender = item.SubscriberName?.trim()
+          const date = item.DateRequested?.trim()
+          return lender && date // Keep only entries with valid lender and date
+        })
+        .map((item) => ({
+          lender: item.SubscriberName.trim(),
+          date: moment(item.DateRequested).format('DD/MM/YYYY'),
+          rawDate: moment(item.LastUpdatedDate)
+        }))
+
+      console.log('✅ FCBC Enquiry History (cleaned):', enquiryHistory.value)
 
       // Employment history
       const rawEmploymentHistory = fcbcCreditHistory?.EmploymentHistory ?? []
@@ -204,7 +237,8 @@ const fetchCreditReport = async (creditReportId) => {
 
       // performing accounts
       if (creditRegistryHistory && Array.isArray(creditRegistryHistory.PerformingAccounts)) {
-        loanAccounts.value = creditRegistryHistory.PerformingAccounts.map((account) => ({
+        loanAccounts.value = creditRegistryHistory.PerformingAccounts.map((account, index) => ({
+          uid: `${account.Account_No || 'acc'}-${index}`,
           lender: account.CreditorName,
           date: moment(account.Date_Opened).format('DD/MM/YYYY'),
           amount: formatNaira(account.Credit_Limit || 0),
@@ -214,7 +248,7 @@ const fetchCreditReport = async (creditReportId) => {
 
           // Additional fields for dropdown
           accountNo: account.Account_No,
-          closedDate: account.Balance_Date,
+          closedDate: moment(account.Balance_Date).format('DD/MM/YYYY'),
           duration: account.Term,
           repaymentFrequency: account.RepaymentFrequency,
           overdue: formatNaira(account.AmountOverdue),
@@ -367,7 +401,19 @@ const fetchCreditReport = async (creditReportId) => {
       }
     } else {
       // Individual logic
+      fcbcHighestDelinquencyRatingCount.value = Array.isArray(
+        fcbcCreditHistory.DeliquencyInformation
+      )
+        ? fcbcCreditHistory.DeliquencyInformation.length
+        : 0
 
+      fcbcCreditAgreementSummaryCount.value = Array.isArray(
+        fcbcCreditHistory.CreditAgreementSummary
+      )
+        ? fcbcCreditHistory.CreditAgreementSummary.length
+        : 0
+
+      // FCBC
       // Personal Details
       const rawPersonal = fcbcCreditHistory?.PersonalDetailsSummary
       personal.value = Array.isArray(rawPersonal) && rawPersonal.length > 0 ? rawPersonal[0] : {}
@@ -380,7 +426,8 @@ const fetchCreditReport = async (creditReportId) => {
 
       // Credit Agreements
       const rawCreditAgreementSummary = fcbcCreditHistory?.CreditAgreementSummary ?? []
-      creditAgreementSummary.value = rawCreditAgreementSummary.map((item) => ({
+      creditAgreementSummary.value = rawCreditAgreementSummary.map((item, index) => ({
+        uid: `${item.AccountNo || 'acc'}-${index}`,
         lender: item.SubscriberName,
         date: moment(item.DateAccountOpened).format('DD/MM/YYYY'),
         amount: parseFloat(item.OpeningBalanceAmt ?? '0'),
@@ -389,7 +436,7 @@ const fetchCreditReport = async (creditReportId) => {
 
         // Additional fields for dropdown
         accountNo: item.AccountNo,
-        closedDate: item.ClosedDate,
+        closedDate: moment(item.ClosedDate).format('DD/MM/YYYY'),
         duration: item.LoanDuration,
         repaymentFrequency: item.RepaymentFrequency,
         overdue: item.AmountOverdue,
@@ -411,12 +458,20 @@ const fetchCreditReport = async (creditReportId) => {
 
       // Employment history
       const rawEmploymentHistory = fcbcCreditHistory?.EmploymentHistory ?? []
-      employmentHistory.value = rawEmploymentHistory.map((item) => ({
-        employerName: item.EmployerDetail,
-        date: moment(item.UpdateDate).format('DD/MM/YYYY'),
-        rawDate: moment(item.UpdateDate)
-      }))
-      console.log('✅FCBC Employment History:', employmentHistory.value)
+
+      employmentHistory.value = rawEmploymentHistory
+        .filter((item) => {
+          const employer = item.EmployerDetail?.trim()
+          const date = item.UpdateDate?.trim()
+          return employer && date
+        })
+        .map((item) => ({
+          employerName: item.EmployerDetail.trim(),
+          date: moment(item.UpdateDate).format('DD/MM/YYYY'),
+          rawDate: moment(item.UpdateDate)
+        }))
+
+      console.log('✅ FCBC Employment History (cleaned):', employmentHistory.value)
 
       // Address history
       const rawAddressHistory = fcbcCreditHistory?.AddressHistory ?? []
@@ -439,7 +494,8 @@ const fetchCreditReport = async (creditReportId) => {
 
       // performing accounts
       if (creditRegistryHistory && Array.isArray(creditRegistryHistory.PerformingAccounts)) {
-        loanAccounts.value = creditRegistryHistory.PerformingAccounts.map((account) => ({
+        loanAccounts.value = creditRegistryHistory.PerformingAccounts.map((account, index) => ({
+          uid: `${account.AccountNo || 'acc'}-${index}`,
           lender: account.CreditorName,
           date: moment(account.Date_Opened).format('DD/MM/YYYY'),
           amount: account.Credit_Limit || 0,
@@ -449,7 +505,7 @@ const fetchCreditReport = async (creditReportId) => {
 
           // Additional fields for dropdown
           accountNo: account.Account_No,
-          closedDate: account.Balance_Date,
+          closedDate: moment(account.Balance_Date).format('DD/MM/YYYY'),
           duration: account.Term,
           repaymentFrequency: account.RepaymentFrequency,
           overdue: account.AmountOverdue,
@@ -628,11 +684,6 @@ const loanHeaders = [
 const employmentHeaders = [
   { title: 'Employer Name', key: 'employerName' },
   { title: 'Date Updated', key: 'date' }
-]
-
-const addressHeaders = [
-  { text: 'Address', value: 'address' },
-  { text: 'Date Updated', value: 'date' }
 ]
 
 // const loans = ref([
@@ -842,17 +893,16 @@ onMounted(() => {
 
               <!-- Show data if summary object exists and is not empty -->
               <div
-                v-if="summary && Object.keys(summary).length > 0"
                 class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-8 text-sm text-gray-600"
               >
                 <!-- Row 1 -->
                 <div>
                   <p class="mb-1">Total active monthly installment</p>
-                  <p class="font-bold text-gray-900">₦{{ summary.TotalMonthlyInstalment }}</p>
+                  <p class="font-bold text-gray-900">{{ summary.TotalMonthlyInstalment }}</p>
                 </div>
                 <div>
                   <p class="mb-1">Total no of credit facilities</p>
-                  <p class="font-bold text-gray-900">{{ summary.TotalCreditFacilities }}</p>
+                  <p class="font-bold text-gray-900">{{ fcbcCreditAgreementSummaryCount }}</p>
                 </div>
                 <div>
                   <p class="mb-1">Total no of open facilities</p>
@@ -862,7 +912,7 @@ onMounted(() => {
                 <!-- Row 2 -->
                 <div>
                   <p class="mb-1">Total arrear amount</p>
-                  <p class="font-bold text-gray-900">₦{{ summary.Amountarrear }}</p>
+                  <p class="font-bold text-gray-900">{{ summary.Amountarrear }}</p>
                 </div>
                 <div>
                   <p class="mb-1">Total outstanding debts</p>
@@ -870,7 +920,7 @@ onMounted(() => {
                 </div>
                 <div>
                   <p class="mb-1">Total no of closed credit facilities</p>
-                  <p class="font-bold text-gray-900">{{ summary.TotalClosedFacilities }}</p>
+                  <p class="font-bold text-gray-900"></p>
                 </div>
 
                 <!-- Row 3 -->
@@ -880,7 +930,7 @@ onMounted(() => {
                 </div>
                 <div>
                   <p class="mb-1">Total no of delinquent facilities</p>
-                  <p class="font-bold text-gray-900">{{ summary.TotalDelinquentFacilities }}</p>
+                  <p class="font-bold text-gray-900">{{ fcbcHighestDelinquencyRatingCount }}</p>
                 </div>
                 <div>
                   <p class="mb-1">Total no written off facilities</p>
@@ -889,7 +939,6 @@ onMounted(() => {
               </div>
 
               <!-- Fallback if no data -->
-              <div v-else class="text-sm text-gray-500 italic">No summary data available.</div>
             </div>
 
             <!-- Loan Accounts Table -->
@@ -981,7 +1030,7 @@ onMounted(() => {
                     :items="employmentHistory"
                     class="elevation-1"
                     fixed-header
-                    height="400"
+                    height="200"
                   >
                     <template #item.date="{ item }">
                       {{ item.date }}
@@ -1021,15 +1070,81 @@ onMounted(() => {
 
           <template v-else-if="activeTab === 'credit_registry'">
             <!-- Personal Details Summary -->
-            <div class="bg-white p-6 rounded space-y-4">
+            <div v-if="idType !== 'business'" class="bg-white p-6 rounded space-y-4">
               <h2 class="text-md font-semibold mb-4">Personal details summary</h2>
               <div class="text-gray-500 text-sm italic">No personal data available.</div>
             </div>
 
-            <div class="bg-white p-6 rounded-md">
+            <div v-else>
+              <!-- BUSINESS INFORMATION SECTION -->
+              <div v-if="idType === 'business'" class="bg-white p-6 rounded space-y-4">
+                <h2 class="text-md font-semibold">Business Information</h2>
+
+                <div class="text-sm text-gray-500 italic">
+                  No business information available.
+                </div>
+              </div>
+
+              <!-- DIRECTOR INFORMATION TABLE -->
+              <div v-if="idType === 'business'" class="bg-white p-6 rounded space-y-4 mt-4">
+                <h2 class="text-md font-semibold">Director Information</h2>
+
+                <div class="text-sm text-gray-500 italic">No director information available.</div>
+              </div>
+            </div>
+
+            <!-- Summary -->
+            <div class="bg-white p-6 rounded-md mt-4">
               <h2 class="text-md font-semibold mb-6">Summary</h2>
 
-              <div class="text-gray-500 text-sm italic">No summary data available.</div>
+              <!-- Show data if summary object exists and is not empty -->
+              <div
+                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-8 text-sm text-gray-600"
+              >
+                <!-- Row 1 -->
+                <div>
+                  <p class="mb-1">Total active monthly installment</p>
+                  <p class="font-bold text-gray-900">{{ summary.TotalMonthlyInstalment }}</p>
+                </div>
+                <div>
+                  <p class="mb-1">Total no of credit facilities</p>
+                  <p class="font-bold text-gray-900">{{ fcbcCreditAgreementSummaryCount }}</p>
+                </div>
+                <div>
+                  <p class="mb-1">Total no of open facilities</p>
+                  <p class="font-bold text-gray-900">{{ summary.TotalOpenFacilities }}</p>
+                </div>
+
+                <!-- Row 2 -->
+                <div>
+                  <p class="mb-1">Total arrear amount</p>
+                  <p class="font-bold text-gray-900">{{ summary.Amountarrear }}</p>
+                </div>
+                <div>
+                  <p class="mb-1">Total outstanding debts</p>
+                  <p class="font-bold text-gray-900">{{ summary.TotalOutstandingdebt }}</p>
+                </div>
+                <div>
+                  <p class="mb-1">Total no of closed credit facilities</p>
+                  <p class="font-bold text-gray-900"></p>
+                </div>
+
+                <!-- Row 3 -->
+                <div>
+                  <p class="mb-1">Total no of account in arrears</p>
+                  <p class="font-bold text-gray-900">{{ summary.TotalAccountarrear }}</p>
+                </div>
+                <div>
+                  <p class="mb-1">Total no of delinquent facilities</p>
+                  <p class="font-bold text-gray-900">{{ fcbcHighestDelinquencyRatingCount }}</p>
+                </div>
+                <div>
+                  <p class="mb-1">Total no written off facilities</p>
+                  <p class="font-bold text-gray-900">{{ summary.TotalWrittenOffFacilities }}</p>
+                </div>
+              </div>
+
+              <!-- Fallback if no data -->
             </div>
 
             <!-- Performaing Accounts Table -->
@@ -1037,70 +1152,61 @@ onMounted(() => {
               <h2 class="text-md font-semibold mb-4">Performing Accounts</h2>
 
               <div v-if="loanAccounts && loanAccounts.length > 0">
-                <table class="min-w-full text-left">
-                  <thead>
-                    <tr class="bg-gray-100 text-sm">
-                      <th class="p-2">Lender's Name</th>
-                      <th class="p-2">Disbursement Date</th>
-                      <th class="p-2">Loan Amount</th>
-                      <th class="p-2">Loan Balance</th>
-                      <th class="p-2">Status</th>
-                      <th class="p-2">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <template v-for="(loan, index) in loanAccounts" :key="index">
-                      <!-- Main Row -->
-                      <tr class="text-sm border-b">
-                        <td class="p-2">{{ loan.lender }}</td>
-                        <td class="p-2">{{ loan.date }}</td>
-                        <td class="p-2">₦{{ loan.amount.toLocaleString() }}</td>
-                        <td class="p-2">₦{{ loan.balance.toLocaleString() }}</td>
-                        <td class="p-2">
-                          <span
-                            :class="
-                              loan.status === 'Closed'
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-red-100 text-red-800'
-                            "
-                            class="px-2 py-1 rounded text-xs"
-                          >
-                            {{ loan.status }}
-                          </span>
-                        </td>
-                        <td class="p-2">
-                          <button
-                            @click="toggleRow(index)"
-                            class="bg-blue-600 text-white text-xs px-3 py-1 rounded hover:bg-blue-700"
-                          >
-                            View
-                          </button>
-                        </td>
-                      </tr>
+                <v-data-table
+                  :headers="loanHeaders"
+                  :items="loanAccounts"
+                  item-value="uid"
+                  :expanded.sync="expanded"
+                  show-expand
+                  fixed-header
+                  height="400"
+                  hide-default-footer
+                  class="elevation-1"
+                >
+                  <!-- Status badge -->
+                  <template #item.status="{ item }">
+                    <v-chip
+                      :color="item.status === 'Closed' ? 'green' : 'red'"
+                      variant="tonal"
+                      size="small"
+                      class="text-white"
+                    >
+                      {{ item.status }}
+                    </v-chip>
+                  </template>
 
-                      <!-- Dropdown Details Row -->
-                      <tr v-if="expandedRow === index" class="bg-gray-50">
-                        <td colspan="6" class="p-4">
-                          <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                            <p><strong>Account number:</strong> {{ loan.accountNo }}</p>
-                            <p><strong>Loan Amount:</strong> ₦{{ loan.amount }}</p>
-                            <p><strong>Current Balance:</strong> ₦{{ loan.balance }}</p>
-                            <p><strong>Amount Overdue:</strong> ₦{{ loan.overdue }}</p>
-                            <p><strong>Instalment Amount:</strong> ₦{{ loan.instalment }}</p>
-                            <p><strong>Loan Duration:</strong> {{ loan.duration }} months</p>
-                            <p>
-                              <strong>Repayment Frequency:</strong> {{ loan.repaymentFrequency }}
-                            </p>
-                            <p><strong>Date Account Opened:</strong> {{ loan.date }}</p>
-                            <p><strong>Closed Date:</strong> {{ loan.closedDate }}</p>
-                            <p><strong>Performance Status:</strong> {{ loan.performanceStatus }}</p>
-                            <p><strong>Account Status:</strong> {{ loan.status }}</p>
-                          </div>
-                        </td>
-                      </tr>
-                    </template>
-                  </tbody>
-                </table>
+                  <!-- Action button -->
+                  <template #item.action="{ item }">
+                    <v-btn size="small" color="primary" @click="toggleRow(item.uid)">
+                      {{ isExpanded(item.uid) ? 'Hide' : 'View' }}
+                    </v-btn>
+                  </template>
+
+                  <!-- Expanded row content -->
+                  <template #expanded-row="{ item }">
+                    <td :colspan="loanHeaders.length" class="p-4 bg-gray-50">
+                      <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                        <p><strong>Account number:</strong> {{ item.accountNo }}</p>
+                        <p><strong>Loan Amount:</strong> {{ item.amount.toLocaleString() }}</p>
+                        <p><strong>Current Balance:</strong> {{ item.balance.toLocaleString() }}</p>
+                        <p>
+                          <strong>Amount Overdue:</strong> {{ item.overdue?.toLocaleString() || 0 }}
+                        </p>
+                        <p>
+                          <strong>Instalment Amount:</strong> ₦{{
+                            item.instalment?.toLocaleString() || 0
+                          }}
+                        </p>
+                        <p><strong>Loan Duration:</strong> {{ item.duration }} months</p>
+                        <p><strong>Repayment Frequency:</strong> {{ item.repaymentFrequency }}</p>
+                        <p><strong>Date Account Opened:</strong> {{ item.date }}</p>
+                        <p><strong>Closed Date:</strong> {{ item.closedDate }}</p>
+                        <p><strong>Performance Status:</strong> {{ item.performanceStatus }}</p>
+                        <p><strong>Account Status:</strong> {{ item.status }}</p>
+                      </div>
+                    </td>
+                  </template>
+                </v-data-table>
               </div>
 
               <div v-else class="text-sm text-gray-500 italic">No loan accounts available.</div>
@@ -1291,7 +1397,12 @@ onMounted(() => {
     </div>
 
     <div class="hidden">
-      <!-- <CreditReportExport
+      <CreditReportExport
+        :id-type="idType"
+        :business-data="businessData"
+        :directors="directors"
+        :fcbcCreditAgreementSummaryCount="fcbcCreditAgreementSummaryCount"
+        :fcbcHighestDelinquencyRatingCount="fcbcHighestDelinquencyRatingCount"
         ref="reportRef"
         :personal="personal"
         :summary="summary"
@@ -1306,7 +1417,7 @@ onMounted(() => {
         :written-off-accounts="writtenOffAccounts"
         :unknown-accounts="unknownAccounts"
         :inquiry-history="inquiryHistory"
-      /> -->
+      />
     </div>
   </MainLayout>
 </template>

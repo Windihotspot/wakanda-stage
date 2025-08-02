@@ -3,80 +3,137 @@
     <!-- First Central Section -->
     <h1 class="text-2xl font-bold">First Central</h1>
     <section>
-      <div class="bg-white p-6 rounded space-y-4">
-        <h2 class="text-md font-semibold mb-4">Personal details summary</h2>
+      <div v-if="idType !== 'business'">
+        <!-- // personal -->
+        <div class="bg-white p-6 rounded space-y-4">
+          <h2 class="text-md font-semibold mb-4">Personal details summary</h2>
 
-        <!-- Check if `personal` has any data -->
-        <div
-          v-if="personal && Object.keys(personal).length > 0"
-          class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-6 gap-x-8 text-sm text-gray-600"
-        >
-          <!-- All your data fields remain unchanged here -->
-          <div>
-            <p class="mb-1">Last Name</p>
-            <p class="font-bold text-gray-900">{{ personal.Surname }}</p>
+          <!-- Check if `personal` has any data -->
+          <div
+            v-if="personal && Object.keys(personal).length > 0"
+            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-6 gap-x-8 text-sm text-gray-600"
+          >
+            <!-- All your data fields remain unchanged here -->
+            <div>
+              <p class="mb-1">Last Name</p>
+              <p class="font-bold text-gray-900">{{ personal.Surname }}</p>
+            </div>
+            <div>
+              <p class="mb-1">Gender</p>
+              <p class="font-bold text-gray-900">{{ personal.Gender }}</p>
+            </div>
+            <div>
+              <p class="mb-1">Phone Number</p>
+              <p class="font-bold text-gray-900">{{ personal.CellularNo }}</p>
+            </div>
+            <div>
+              <p class="mb-1">Latest Residential Address</p>
+              <p class="font-bold text-gray-900 leading-snug">
+                {{ personal.ResidentialAddress1 }}
+              </p>
+            </div>
+            <div>
+              <p class="mb-1">First Name</p>
+              <p class="font-bold text-gray-900">{{ personal.FirstName }}</p>
+            </div>
+            <div>
+              <p class="mb-1">Bank Verification Number</p>
+              <p class="font-bold text-gray-900">{{ personal.BankVerificationNo }}</p>
+            </div>
+            <div>
+              <p class="mb-1">Work Telephone</p>
+              <p class="font-bold text-gray-900">{{ personal.WorkTelephoneNo }}</p>
+            </div>
+            <div>
+              <p class="mb-1">Other Names</p>
+              <p class="font-bold text-gray-900">{{ personal.OtherNames }}</p>
+            </div>
+            <div>
+              <p class="mb-1">Date of Birth</p>
+              <p class="font-bold text-gray-900">{{ personal.BirthDate }}</p>
+            </div>
+            <div>
+              <p class="mb-1">Home Telephone</p>
+              <p class="font-bold text-gray-900">{{ personal.HomeTelephoneNo }}</p>
+            </div>
           </div>
-          <div>
-            <p class="mb-1">Gender</p>
-            <p class="font-bold text-gray-900">{{ personal.Gender }}</p>
-          </div>
-          <div>
-            <p class="mb-1">Phone Number</p>
-            <p class="font-bold text-gray-900">{{ personal.CellularNo }}</p>
-          </div>
-          <div>
-            <p class="mb-1">Latest Residential Address</p>
-            <p class="font-bold text-gray-900 leading-snug">
-              {{ personal.ResidentialAddress1 }}
-            </p>
-          </div>
-          <div>
-            <p class="mb-1">First Name</p>
-            <p class="font-bold text-gray-900">{{ personal.FirstName }}</p>
-          </div>
-          <div>
-            <p class="mb-1">Bank Verification Number</p>
-            <p class="font-bold text-gray-900">{{ personal.BankVerificationNo }}</p>
-          </div>
-          <div>
-            <p class="mb-1">Work Telephone</p>
-            <p class="font-bold text-gray-900">{{ personal.WorkTelephoneNo }}</p>
-          </div>
-          <div>
-            <p class="mb-1">Other Names</p>
-            <p class="font-bold text-gray-900">{{ personal.OtherNames }}</p>
-          </div>
-          <div>
-            <p class="mb-1">Date of Birth</p>
-            <p class="font-bold text-gray-900">{{ personal.BirthDate }}</p>
-          </div>
-          <div>
-            <p class="mb-1">Home Telephone</p>
-            <p class="font-bold text-gray-900">{{ personal.HomeTelephoneNo }}</p>
+
+          <!-- Fallback message if no data -->
+          <div v-else class="text-gray-500 text-sm italic">No personal data available.</div>
+        </div>
+      </div>
+
+      <div v-else>
+        <!-- BUSINESS INFORMATION SECTION -->
+        <div v-if="idType === 'business'" class="bg-white p-6 rounded space-y-4">
+          <h2 class="text-md font-semibold">Business Information</h2>
+          <div
+            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-8 text-sm text-gray-600"
+          >
+            <div>
+              <p class="mb-1">Business Name</p>
+              <p class="font-bold text-gray-900">{{ businessData.BusinessName }}</p>
+            </div>
+            <div>
+              <p class="mb-1">Date of Incorporation</p>
+              <p class="font-bold text-gray-900">{{ businessData.DateOfIncorporation }}</p>
+            </div>
+            <div>
+              <p class="mb-1">Business Address</p>
+              <p class="font-bold text-gray-900">
+                {{ businessData.CommercialAddress1 }}, {{ businessData.CommercialAddress2 }},
+                {{ businessData.CommercialAddress4 }}
+              </p>
+            </div>
           </div>
         </div>
 
-        <!-- Fallback message if no data -->
-        <div v-else class="text-gray-500 text-sm italic">No personal data available.</div>
+        <!-- DIRECTOR INFORMATION TABLE -->
+        <div v-if="idType === 'business'" class="bg-white p-6 rounded space-y-4 mt-4">
+          <h2 class="text-md font-semibold">Director Information</h2>
+
+          <div v-if="directors.length > 0">
+            <table class="min-w-full text-sm text-left">
+              <thead class="text-xs font-semibold text-gray-700">
+                <tr>
+                  <th class="p-2">First Name</th>
+                  <th class="p-2">Other Names</th>
+                  <th class="p-2">Surname</th>
+                  <th class="p-2">Identification Number</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(director, index) in directors" :key="index" class="">
+                  <td class="p-2 font-bold text-gray-900">{{ director.firstName }}</td>
+                  <td class="p-2 font-bold text-gray-900">{{ director.othernames }}</td>
+                  <td class="p-2 font-bold text-gray-900">{{ director.surname }}</td>
+                  <td class="p-2 font-bold text-gray-900">
+                    {{ director.Identificationnumber }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div v-else class="text-sm text-gray-500 italic">No director information available.</div>
+        </div>
       </div>
 
       <!-- Summary -->
-      <div class="bg-white p-6 rounded-md">
+      <div class="bg-white p-6 rounded-md mt-4">
         <h2 class="text-md font-semibold mb-6">Summary</h2>
 
         <!-- Show data if summary object exists and is not empty -->
         <div
-          v-if="summary && Object.keys(summary).length > 0"
           class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-8 text-sm text-gray-600"
         >
           <!-- Row 1 -->
           <div>
             <p class="mb-1">Total active monthly installment</p>
-            <p class="font-bold text-gray-900">₦{{ summary.TotalMonthlyInstalment }}</p>
+            <p class="font-bold text-gray-900">{{ summary.TotalMonthlyInstalment }}</p>
           </div>
           <div>
             <p class="mb-1">Total no of credit facilities</p>
-            <p class="font-bold text-gray-900">{{ summary.TotalCreditFacilities }}</p>
+            <p class="font-bold text-gray-900">{{ fcbcCreditAgreementSummaryCount }}</p>
           </div>
           <div>
             <p class="mb-1">Total no of open facilities</p>
@@ -86,7 +143,7 @@
           <!-- Row 2 -->
           <div>
             <p class="mb-1">Total arrear amount</p>
-            <p class="font-bold text-gray-900">₦{{ summary.Amountarrear }}</p>
+            <p class="font-bold text-gray-900">{{ summary.Amountarrear }}</p>
           </div>
           <div>
             <p class="mb-1">Total outstanding debts</p>
@@ -94,7 +151,7 @@
           </div>
           <div>
             <p class="mb-1">Total no of closed credit facilities</p>
-            <p class="font-bold text-gray-900">{{ summary.TotalClosedFacilities }}</p>
+            <p class="font-bold text-gray-900"></p>
           </div>
 
           <!-- Row 3 -->
@@ -104,7 +161,7 @@
           </div>
           <div>
             <p class="mb-1">Total no of delinquent facilities</p>
-            <p class="font-bold text-gray-900">{{ summary.TotalDelinquentFacilities }}</p>
+            <p class="font-bold text-gray-900">{{ fcbcHighestDelinquencyRatingCount }}</p>
           </div>
           <div>
             <p class="mb-1">Total no written off facilities</p>
@@ -113,7 +170,6 @@
         </div>
 
         <!-- Fallback if no data -->
-        <div v-else class="text-sm text-gray-500 italic">No summary data available.</div>
       </div>
 
       <!-- Loan Accounts Table -->
@@ -121,67 +177,52 @@
         <h2 class="text-md font-semibold mb-4">Loan Accounts</h2>
 
         <div v-if="creditAgreementSummary && creditAgreementSummary.length > 0">
-          <table class="min-w-full text-left">
-            <thead>
-              <tr class="bg-gray-100 text-sm">
-                <th class="p-2">Lender's Name</th>
-                <th class="p-2">Disbursement Date</th>
-                <th class="p-2">Loan Amount</th>
-                <th class="p-2">Loan Balance</th>
-                <th class="p-2">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <template v-for="(loan, index) in creditAgreementSummary" :key="index">
-                <!-- Main Row -->
-                <tr class="text-sm border-b">
-                  <td class="p-2">{{ loan.lender }}</td>
-                  <td class="p-2">{{ loan.disbursementDate }}</td>
-                  <td class="p-2">₦{{ loan.loanAmount.toLocaleString() }}</td>
-                  <td class="p-2">₦{{ loan.loanBalance.toLocaleString() }}</td>
-                  <td class="p-2">
-                    <span
-                      :class="
-                        loan.status === 'Closed'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      "
-                      class="px-2 py-1 rounded text-xs"
-                    >
-                      {{ loan.status }}
-                    </span>
-                  </td>
-                  <td class="p-2">
-                    <button
-                      @click="toggleRow(index)"
-                      class="bg-blue-600 text-white text-xs px-3 py-1 rounded hover:bg-blue-700"
-                    >
-                      View
-                    </button>
-                  </td>
-                </tr>
+          <v-data-table
+            :headers="loanHeaders"
+            :items="creditAgreementSummary"
+            item-value="uid"
+            :expanded.sync="expanded"
+            class="elevation-1"
+            fixed-header
+            height="400"
+            hide-default-footer
+          >
+            <!-- Default item row -->
+            <template #item.status="{ item }">
+              <v-chip
+                :color="getStatusColor(item.status)"
+                variant="tonal"
+                size="small"
+                class="text-white"
+              >
+                {{ item.status?.trim() || 'Unknown' }}
+              </v-chip>
+            </template>
+            <template #item.action="{ item }">
+              <v-btn size="small" color="primary" @click="toggleRow(item.uid)">
+                {{ isExpanded(item.uid) ? 'Hide' : 'View' }}
+              </v-btn>
+            </template>
 
-                <!-- Dropdown Details Row -->
-                <tr class="bg-gray-50">
-                  <td colspan="6" class="p-4">
-                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                      <p><strong>Account number:</strong> {{ loan.accountNo }}</p>
-                      <p><strong>Loan Amount:</strong> ₦{{ loan.loanAmount }}</p>
-                      <p><strong>Current Balance:</strong> ₦{{ loan.loanBalance }}</p>
-                      <p><strong>Amount Overdue:</strong> ₦{{ loan.amountOverdue }}</p>
-                      <p><strong>Instalment Amount:</strong> ₦{{ loan.instalmentAmount }}</p>
-                      <p><strong>Loan Duration:</strong> {{ loan.loanDuration }} months</p>
-                      <p><strong>Repayment Frequency:</strong> {{ loan.repaymentFrequency }}</p>
-                      <p><strong>Date Account Opened:</strong> {{ loan.dateOpened }}</p>
-                      <p><strong>Closed Date:</strong> {{ loan.closedDate }}</p>
-                      <p><strong>Performance Status:</strong> {{ loan.performanceStatus }}</p>
-                      <p><strong>Account Status:</strong> {{ loan.status }}</p>
-                    </div>
-                  </td>
-                </tr>
-              </template>
-            </tbody>
-          </table>
+            <!-- Expanded content -->
+            <template #expanded-row="{ item }">
+              <td :colspan="loanHeaders.length" class="px-4 py-2 bg-gray-50 mb-4">
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                  <p><strong>Account number:</strong> {{ item.accountNo }}</p>
+                  <p><strong>Loan Amount:</strong> {{ item.amount }}</p>
+                  <p><strong>Current Balance:</strong> {{ item.balance }}</p>
+                  <p><strong>Amount Overdue:</strong> {{ item.overdue }}</p>
+                  <p><strong>Instalment Amount:</strong> {{ item.instalment }}</p>
+                  <p><strong>Loan Duration:</strong> {{ item.loanDuration }}</p>
+                  <p><strong>Repayment Frequency:</strong> {{ item.repaymentFrequency }}</p>
+                  <p><strong>Date Account Opened:</strong> {{ item.date }}</p>
+                  <p><strong>Closed Date:</strong> {{ item.closedDate }}</p>
+                  <p><strong>Performance Status:</strong> {{ item.performanceStatus }}</p>
+                  <p><strong>Account Status:</strong> {{ item.status }}</p>
+                </div>
+              </td>
+            </template>
+          </v-data-table>
         </div>
 
         <div v-else class="text-sm text-gray-500 italic">No loan accounts available.</div>
@@ -215,20 +256,17 @@
         <div class="bg-white rounded p-4">
           <h2 class="font-semibold text-md mb-4">Employment History</h2>
           <div v-if="employmentHistory && employmentHistory.length > 0">
-            <table class="w-full text-sm text-left">
-              <thead class="bg-gray-100">
-                <tr>
-                  <th class="p-2">Employer Name</th>
-                  <th class="p-2">Date Updated</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(employment, index) in employmentHistory" :key="index" class="border-b">
-                  <td class="p-2">{{ employment.employerName }}</td>
-                  <td class="p-2">{{ employment.date }}</td>
-                </tr>
-              </tbody>
-            </table>
+            <v-data-table
+              :headers="employmentHeaders"
+              :items="employmentHistory"
+              class="elevation-1"
+              fixed-header
+              height="200"
+            >
+              <template #item.date="{ item }">
+                {{ item.date }}
+              </template>
+            </v-data-table>
           </div>
           <div v-else class="text-sm text-gray-500 italic">No employment history available.</div>
         </div>
@@ -238,20 +276,22 @@
       <div class="bg-white rounded p-4">
         <h2 class="font-semibold text-md mb-4">Address History</h2>
         <div v-if="addressHistory && addressHistory.length > 0">
-          <table class="w-full text-sm text-left">
-            <thead class="bg-gray-100">
-              <tr>
-                <th class="p-2">Address</th>
-                <th class="p-2">Date Updated</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(address, index) in addressHistory" :key="index" class="border-b">
-                <td class="p-2">{{ address.address }}</td>
-                <td class="p-2">{{ address.date }}</td>
-              </tr>
-            </tbody>
-          </table>
+          <div class="overflow-auto max-h-72 border rounded">
+            <table class="min-w-full text-sm text-left">
+              <thead class="bg-gray-100 sticky top-0 z-10">
+                <tr>
+                  <th class="p-3 font-medium text-gray-700">Address</th>
+                  <th class="p-3 font-medium text-gray-700 w-40">Date Updated</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200">
+                <tr v-for="(address, index) in addressHistory" :key="index">
+                  <td class="p-3 text-gray-800">{{ address.address }}</td>
+                  <td class="p-3 text-gray-800 w-40">{{ address.date }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
         <div v-else class="text-sm text-gray-500 italic">No address history available.</div>
       </div>
@@ -260,15 +300,80 @@
     <!-- Credit Registry Section -->
     <h1 class="text-2xl font-bold">Credit registry</h1>
     <section>
-      <div class="bg-white p-6 rounded space-y-4">
+      <!-- Personal Details Summary -->
+      <div v-if="idType !== 'business'" class="bg-white p-6 rounded space-y-4">
         <h2 class="text-md font-semibold mb-4">Personal details summary</h2>
         <div class="text-gray-500 text-sm italic">No personal data available.</div>
       </div>
 
-      <div class="bg-white p-6 rounded-md">
+      <div v-else>
+        <!-- BUSINESS INFORMATION SECTION -->
+        <div v-if="idType === 'business'" class="bg-white p-6 rounded space-y-4">
+          <h2 class="text-md font-semibold">Business Information</h2>
+
+          <div class="text-sm text-gray-500 italic">No business information available.</div>
+        </div>
+
+        <!-- DIRECTOR INFORMATION TABLE -->
+        <div v-if="idType === 'business'" class="bg-white p-6 rounded space-y-4 mt-4">
+          <h2 class="text-md font-semibold">Director Information</h2>
+
+          <div class="text-sm text-gray-500 italic">No director information available.</div>
+        </div>
+      </div>
+
+      <!-- Summary -->
+      <div class="bg-white p-6 rounded-md mt-4">
         <h2 class="text-md font-semibold mb-6">Summary</h2>
 
-        <div class="text-gray-500 text-sm italic">No summary data available.</div>
+        <!-- Show data if summary object exists and is not empty -->
+        <div
+          class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-8 text-sm text-gray-600"
+        >
+          <!-- Row 1 -->
+          <div>
+            <p class="mb-1">Total active monthly installment</p>
+            <p class="font-bold text-gray-900">{{ summary.TotalMonthlyInstalment }}</p>
+          </div>
+          <div>
+            <p class="mb-1">Total no of credit facilities</p>
+            <p class="font-bold text-gray-900">{{ fcbcCreditAgreementSummaryCount }}</p>
+          </div>
+          <div>
+            <p class="mb-1">Total no of open facilities</p>
+            <p class="font-bold text-gray-900">{{ summary.TotalOpenFacilities }}</p>
+          </div>
+
+          <!-- Row 2 -->
+          <div>
+            <p class="mb-1">Total arrear amount</p>
+            <p class="font-bold text-gray-900">{{ summary.Amountarrear }}</p>
+          </div>
+          <div>
+            <p class="mb-1">Total outstanding debts</p>
+            <p class="font-bold text-gray-900">{{ summary.TotalOutstandingdebt }}</p>
+          </div>
+          <div>
+            <p class="mb-1">Total no of closed credit facilities</p>
+            <p class="font-bold text-gray-900"></p>
+          </div>
+
+          <!-- Row 3 -->
+          <div>
+            <p class="mb-1">Total no of account in arrears</p>
+            <p class="font-bold text-gray-900">{{ summary.TotalAccountarrear }}</p>
+          </div>
+          <div>
+            <p class="mb-1">Total no of delinquent facilities</p>
+            <p class="font-bold text-gray-900">{{ fcbcHighestDelinquencyRatingCount }}</p>
+          </div>
+          <div>
+            <p class="mb-1">Total no written off facilities</p>
+            <p class="font-bold text-gray-900">{{ summary.TotalWrittenOffFacilities }}</p>
+          </div>
+        </div>
+
+        <!-- Fallback if no data -->
       </div>
 
       <!-- Performaing Accounts Table -->
@@ -276,60 +381,59 @@
         <h2 class="text-md font-semibold mb-4">Performing Accounts</h2>
 
         <div v-if="loanAccounts && loanAccounts.length > 0">
-          <table class="min-w-full text-left">
-            <thead>
-              <tr class="bg-gray-100 text-sm">
-                <th class="p-2">Lender's Name</th>
-                <th class="p-2">Disbursement Date</th>
-                <th class="p-2">Loan Amount</th>
-                <th class="p-2">Loan Balance</th>
-                <th class="p-2">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <template v-for="(loan, index) in loanAccounts" :key="index">
-                <!-- Main Row -->
-                <tr class="text-sm border-b">
-                  <td class="p-2">{{ loan.lender }}</td>
-                  <td class="p-2">{{ loan.date }}</td>
-                  <td class="p-2">₦{{ loan.amount.toLocaleString() }}</td>
-                  <td class="p-2">₦{{ loan.balance.toLocaleString() }}</td>
-                  <td class="p-2">
-                    <span
-                      :class="
-                        loan.status === 'Closed'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      "
-                      class="px-2 py-1 rounded text-xs"
-                    >
-                      {{ loan.status }}
-                    </span>
-                  </td>
-                 
-                </tr>
+          <v-data-table
+            :headers="loanHeaders"
+            :items="loanAccounts"
+            item-value="uid"
+            :expanded.sync="expanded"
+            show-expand
+            fixed-header
+            height="400"
+            hide-default-footer
+            class="elevation-1"
+          >
+            <!-- Status badge -->
+            <template #item.status="{ item }">
+              <v-chip
+                :color="item.status === 'Closed' ? 'green' : 'red'"
+                variant="tonal"
+                size="small"
+                class="text-white"
+              >
+                {{ item.status }}
+              </v-chip>
+            </template>
 
-                <!-- Dropdown Details Row -->
-                <tr class="bg-gray-50">
-                  <td colspan="6" class="p-4">
-                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                      <p><strong>Account number:</strong> {{ loan.accountNo }}</p>
-                      <p><strong>Loan Amount:</strong> ₦{{ loan.amount }}</p>
-                      <p><strong>Current Balance:</strong> ₦{{ loan.balance }}</p>
-                      <p><strong>Amount Overdue:</strong> ₦{{ loan.overdue }}</p>
-                      <p><strong>Instalment Amount:</strong> ₦{{ loan.instalment }}</p>
-                      <p><strong>Loan Duration:</strong> {{ loan.duration }} months</p>
-                      <p><strong>Repayment Frequency:</strong> {{ loan.repaymentFrequency }}</p>
-                      <p><strong>Date Account Opened:</strong> {{ loan.date }}</p>
-                      <p><strong>Closed Date:</strong> {{ loan.closedDate }}</p>
-                      <p><strong>Performance Status:</strong> {{ loan.performanceStatus }}</p>
-                      <p><strong>Account Status:</strong> {{ loan.status }}</p>
-                    </div>
-                  </td>
-                </tr>
-              </template>
-            </tbody>
-          </table>
+            <!-- Action button -->
+            <template #item.action="{ item }">
+              <v-btn size="small" color="primary" @click="toggleRow(item.uid)">
+                {{ isExpanded(item.uid) ? 'Hide' : 'View' }}
+              </v-btn>
+            </template>
+
+            <!-- Expanded row content -->
+            <template #expanded-row="{ item }">
+              <td :colspan="loanHeaders.length" class="p-4 bg-gray-50">
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                  <p><strong>Account number:</strong> {{ item.accountNo }}</p>
+                  <p><strong>Loan Amount:</strong> {{ item.amount.toLocaleString() }}</p>
+                  <p><strong>Current Balance:</strong> {{ item.balance.toLocaleString() }}</p>
+                  <p><strong>Amount Overdue:</strong> {{ item.overdue?.toLocaleString() || 0 }}</p>
+                  <p>
+                    <strong>Instalment Amount:</strong> ₦{{
+                      item.instalment?.toLocaleString() || 0
+                    }}
+                  </p>
+                  <p><strong>Loan Duration:</strong> {{ item.duration }} months</p>
+                  <p><strong>Repayment Frequency:</strong> {{ item.repaymentFrequency }}</p>
+                  <p><strong>Date Account Opened:</strong> {{ item.date }}</p>
+                  <p><strong>Closed Date:</strong> {{ item.closedDate }}</p>
+                  <p><strong>Performance Status:</strong> {{ item.performanceStatus }}</p>
+                  <p><strong>Account Status:</strong> {{ item.status }}</p>
+                </div>
+              </td>
+            </template>
+          </v-data-table>
         </div>
 
         <div v-else class="text-sm text-gray-500 italic">No loan accounts available.</div>
@@ -363,7 +467,11 @@
               <td class="p-3 border-b">{{ loan.date }}</td>
               <td class="p-3 border-b">₦{{ loan.amount.toLocaleString() }}</td>
               <td class="p-3 border-b">₦{{ loan.balance.toLocaleString() }}</td>
-              
+              <td class="p-3 border-b">
+                <button class="bg-red-600 text-white text-xs px-3 py-1 rounded hover:bg-red-700">
+                  View
+                </button>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -397,7 +505,11 @@
               <td class="p-3 border-b">{{ loan.date }}</td>
               <td class="p-3 border-b">₦{{ loan.amount.toLocaleString() }}</td>
               <td class="p-3 border-b">₦{{ loan.balance.toLocaleString() }}</td>
-              
+              <td class="p-3 border-b">
+                <button class="bg-red-600 text-white text-xs px-3 py-1 rounded hover:bg-red-700">
+                  View
+                </button>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -414,6 +526,7 @@
                 <th class="p-2">Disbursement Date</th>
                 <th class="p-2">Loan Amount</th>
                 <th class="p-2">Loan Balance</th>
+                <th class="p-2">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -422,7 +535,13 @@
                 <td class="p-2">{{ item.date }}</td>
                 <td class="p-2">₦{{ item.amount.toLocaleString() }}</td>
                 <td class="p-2">₦{{ item.balance.toLocaleString() }}</td>
-                
+                <td class="p-2">
+                  <button
+                    class="bg-blue-600 text-white text-xs px-3 py-1 rounded hover:bg-blue-700"
+                  >
+                    View
+                  </button>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -441,6 +560,7 @@
                 <th class="p-2">Disbursement Date</th>
                 <th class="p-2">Loan Amount</th>
                 <th class="p-2">Loan Balance</th>
+                <th class="p-2">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -498,10 +618,15 @@
 
 <script setup>
 import { ref, defineExpose } from 'vue'
-import { ElNotification } from 'element-plus'
+import { ElNotification, ElMessage } from 'element-plus'
 import html2pdf from 'html2pdf.js'
 
 const props = defineProps({
+  fcbcCreditAgreementSummaryCount: Number,
+  fcbcHighestDelinquencyRatingCount: Number,
+  idType: String,
+  businessData: Object,
+  directors: Array,
   personal: Object,
   summary: Object,
   creditAgreementSummary: Array,
@@ -517,21 +642,64 @@ const props = defineProps({
   unknownAccounts: Array,
   inquiryHistory: Array
 })
+const expanded = ref([])
+
+const toggleRow = (uid) => {
+  expanded.value = expanded.value.includes(uid) ? [] : [uid]
+}
+
+const isExpanded = (uid) => expanded.value.includes(uid)
+
+const loanHeaders = [
+  { title: "Lender's Name", key: 'lender' },
+  { title: 'Disbursement Date', key: 'date' },
+  { title: 'Loan Amount', value: 'amount' },
+  { title: 'Loan Balance', key: 'balance' },
+  { title: 'Status', key: 'status' },
+  { title: 'Action', key: 'action', sortable: false }
+]
+
+const employmentHeaders = [
+  { title: 'Employer Name', key: 'employerName' },
+  { title: 'Date Updated', key: 'date' }
+]
+
+
+function getStatusColor(status) {
+  if (!status || status.trim() === '') return 'grey'
+
+  const normalized = status.toLowerCase().trim()
+
+  if (normalized === 'closed') return 'green'
+  if (normalized === 'open') return 'red'
+  if (normalized === 'paid up') return 'blue'
+
+  return 'grey' // fallback for unknown values
+}
 
 const pdfContent = ref(null)
 
 const exportPDF = () => {
-  const firstName = props.personal?.FirstName || 'FirstName'
-  const lastName = props.personal?.Surname || 'LastName'
   const now = new Date()
   const dateString = now.toISOString().slice(0, 16).replace('T', '_').replace(':', '-')
-  const filename = `${firstName}_${lastName}_${dateString}.pdf`
 
-  ElNotification({
-    title: 'Preparing PDF',
+  let filename = ''
+
+  if (props.idType === 'business' && props.businessData) {
+    const businessName = props.businessData.BusinessName || 'Business'
+    filename = `${businessName}_${dateString}.pdf`
+  } else {
+    const firstName = props.personal?.FirstName || 'FirstName'
+    const lastName = props.personal?.Surname || 'LastName'
+    filename = `${firstName}_${lastName}_${dateString}.pdf`
+  }
+
+  // ✅ Show loading message
+  const loadingMessage = ElMessage({
     message: 'Downloading report...',
-    type: 'warning',
-    duration: 2000
+    type: 'info',
+    duration: 0, // stays until closed
+    showClose: false
   })
 
   setTimeout(() => {
@@ -546,6 +714,10 @@ const exportPDF = () => {
       .from(pdfContent.value)
       .save()
       .then(() => {
+        // ✅ Close loading message
+        loadingMessage.close()
+
+        // ✅ Show success notification
         ElNotification({
           title: 'Download Complete',
           message: 'Report has been downloaded successfully!',
@@ -553,7 +725,7 @@ const exportPDF = () => {
           duration: 3000
         })
       })
-  }, 500) // slight delay to show the "Preparing" notification
+  }, 500)
 }
 
 // 👇 Expose to parent

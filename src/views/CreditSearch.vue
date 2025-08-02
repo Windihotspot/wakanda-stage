@@ -468,7 +468,7 @@ onMounted(() => {
               <td class="py-3 px-6 text-left">{{ index + 1 }}</td>
 
               <td class="py-3 px-6">{{ credit.unique_key }}</td>
-              <td class="py-3 px-6">{{ moment(credit.created_date).format('MMMM Do, YYYY') }}</td>
+              <td class="py-3 px-6">{{ moment(credit.created_at).format('MMMM Do, YYYY') }}</td>
               <td class="py-3 px-6">{{ credit.id_type }}</td>
               <td class="py-3 px-6">
                 {{
