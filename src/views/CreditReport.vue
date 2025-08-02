@@ -112,7 +112,7 @@ a
     : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
         ?.value
 
-  const apiUrl = `${import.meta.env.VITE_API_URL}
+  const apiUrl = `${import.meta.env.VITE_API_BASE_URL}
 /api/${tenantId}/get-credit-check-key?unique_key=${creditReportId}`
   loading.value = true
 

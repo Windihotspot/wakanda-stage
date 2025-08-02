@@ -309,7 +309,7 @@ const isLoading = ref(true)
 
 const getRoles = async () => {
   try {
-    const response = await axios.get(`${import.meta.env.VITE_API_URL}
+    const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}
 /api/${tenantId}/get-roles`, {
       headers: {
         Authorization: `Bearer ${token.value}`
@@ -344,7 +344,7 @@ const newUser = ref({
 
 const fetchTeam = async () => {
   usersLoading.value = true
-  const API_URL = `${import.meta.env.VITE_API_URL}
+  const API_URL = `${import.meta.env.VITE_API_BASE_URL}
 /api/${tenantId}/get-team`
 
   try {
@@ -412,7 +412,7 @@ const inviteUser = async () => {
     console.log('invite user request payload:', payload)
 
     const response = await axios.post(
-      `${import.meta.env.VITE_API_URL}
+      `${import.meta.env.VITE_API_BASE_URL}
 /api/${tenantId}/add-member`,
       payload,
       {
@@ -467,7 +467,7 @@ const updatePassword = async () => {
   try {
     console.log('new password:', profile.value.password)
     const response = await axios.put(
-      `${import.meta.env.VITE_API_URL}
+      `${import.meta.env.VITE_API_BASE_URL}
 /api/${tenantId}/update-password`,
       { new_password: profile.value.password },
       {
@@ -522,7 +522,7 @@ const saveProfile = async () => {
       console.log('payload save profile:', payload)
 
       const response = await axios.put(
-        `${import.meta.env.VITE_API_URL}
+        `${import.meta.env.VITE_API_BASE_URL}
 /api/${tenantId}/update-user-data`,
         payload,
         {

@@ -332,7 +332,7 @@ const onSubmit = async () => {
 
     console.log('Payload:', payload);
 
-  const API_URL = `${import.meta.env.VITE_API_URL}
+  const API_URL = `${import.meta.env.VITE_API_BASE_URL}
 /api/reset-password`
   if (!validateForm()) {
     return

@@ -244,7 +244,7 @@ const uploadFile = async () => {
     formData.append('password', filePassword.value)
   }
 
-  const API_URL = `${import.meta.env.VITE_API_URL}
+  const API_URL = `${import.meta.env.VITE_API_BASE_URL}
 /api/${tenantId}/bank-statement-analyze`
 
   console.log('➡️ Uploading file...')

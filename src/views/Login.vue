@@ -27,11 +27,13 @@ const submitForm = async () => {
   loginForm.value.errors = {} // Clear previous errors
 
   try {
-    const response = await axios.post(`${import.meta.env.VITE_API_URL}
-/api/login`, {
-      email: loginForm.value.email,
-      password: loginForm.value.password
-    })
+    const response = await axios.post(
+      `${import.meta.env.VITE_API_BASE_URL}/api/login`,
+      {
+        email: loginForm.value.email,
+        password: loginForm.value.password
+      }
+    )
 
     console.log('Login successful:', response.data)
     // Extract data from the response properly

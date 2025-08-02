@@ -893,7 +893,7 @@ const tenantId = savedAuth
       authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id
     )?.value;
 
-  const apiUrl = `${import.meta.env.VITE_API_URL}
+  const apiUrl = `${import.meta.env.VITE_API_BASE_URL}
 /api/${tenantId}/get-analysis-result?analysis_id=${analysisId}`
   loading.value = true
 
@@ -1304,7 +1304,7 @@ const tenantId = savedAuth
 
   const analysisId = route.params.id
 
-  const apiUrl = `${import.meta.env.VITE_API_URL}
+  const apiUrl = `${import.meta.env.VITE_API_BASE_URL}
 /api/${tenantId}/get-statement-transactions?analysis_id=${analysisId}`
 
   try {
@@ -1420,7 +1420,7 @@ const tenantId = savedAuth
 
   const analysisId = route.params.id
 
-  const apiUrl = `${import.meta.env.VITE_API_URL}
+  const apiUrl = `${import.meta.env.VITE_API_BASE_URL}
 /api/${tenantId}/download-insight-report?analysis_id=${analysisId}`
 
   try {

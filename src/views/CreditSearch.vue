@@ -194,7 +194,7 @@ const fetchCreditChecks = async () => {
     : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
         ?.value
 
-  const API_URL = `${import.meta.env.VITE_API_URL}
+  const API_URL = `${import.meta.env.VITE_API_BASE_URL}
 /api/${tenantId}/fetch-existing-credit-checks`
   isLoading.value = true
 
@@ -227,7 +227,7 @@ const submitIndividualForm = async () => {
     : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
         ?.value
 
-  const API_URL = `${import.meta.env.VITE_API_URL}
+  const API_URL = `${import.meta.env.VITE_API_BASE_URL}
 /api/${tenant_id}/check-credit-history`
   const isValid = await individualForm.value?.validate()
   if (!isValid) return
@@ -293,7 +293,7 @@ const submitCompanyForm = async () => {
     : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
         ?.value
 
-  const API_URL = `${import.meta.env.VITE_API_URL}
+  const API_URL = `${import.meta.env.VITE_API_BASE_URL}
 /api/${tenant_id}/check-credit-history`
 
   const isValid = await companyForm.value.validate()

@@ -252,7 +252,7 @@ const tenantId = savedAuth
       authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id
     )?.value;
 
-  const API_URL = `${import.meta.env.VITE_API_URL}
+  const API_URL = `${import.meta.env.VITE_API_BASE_URL}
 /api/${tenantId}/get-tenant-wallet`
   isLoading.value = true
   try {
@@ -289,7 +289,7 @@ const tenantId = savedAuth
     )?.value;
 
 
-  const API_URL = `${import.meta.env.VITE_API_URL}
+  const API_URL = `${import.meta.env.VITE_API_BASE_URL}
 /api/${tenantId}/get-wallet-transactions`
   isLoading.value = true
 
@@ -357,7 +357,7 @@ const tenantId = savedAuth
   //   return
   // }
 
-  const API_URL = `${import.meta.env.VITE_API_URL}
+  const API_URL = `${import.meta.env.VITE_API_BASE_URL}
 /api/${tenantId}/initialize-payment`
   console.log('fund wallet amount:', amount.value)
   console.log('fund wallet token:', token)

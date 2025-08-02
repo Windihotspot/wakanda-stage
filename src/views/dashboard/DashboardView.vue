@@ -44,7 +44,7 @@ const tenantId = savedAuth
       authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id
     )?.value;
 
-  const API_URL = `${import.meta.env.VITE_API_URL}
+  const API_URL = `${import.meta.env.VITE_API_BASE_URL}
 /api/${tenantId}/fetch-tenant-analyses`
   isLoading.value = true
 
@@ -94,7 +94,7 @@ const filteredStatements = computed(() => {
 })
 
 const fetchAnalysisResult = async (analysisId) => {
-  const apiUrl = `${import.meta.env.VITE_API_URL}
+  const apiUrl = `${import.meta.env.VITE_API_BASE_URL}
 /api/${tenantId.value}/get-analysis-result?analysis_id=${analysisId};`
 
   const raw = {
