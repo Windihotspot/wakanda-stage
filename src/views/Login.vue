@@ -27,7 +27,8 @@ const submitForm = async () => {
   loginForm.value.errors = {} // Clear previous errors
 
   try {
-    const response = await axios.post('https://staging.getjupita.com/api/login', {
+    const response = await axios.post('${import.meta.env.VITE_API_URL}
+/api/login', {
       email: loginForm.value.email,
       password: loginForm.value.password
     })

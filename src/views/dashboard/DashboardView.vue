@@ -44,7 +44,8 @@ const tenantId = savedAuth
       authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id
     )?.value;
 
-  const API_URL = `https://staging.getjupita.com/api/${tenantId}/fetch-tenant-analyses`
+  const API_URL = `${import.meta.env.VITE_API_URL}
+/api/${tenantId}/fetch-tenant-analyses`
   isLoading.value = true
 
   try {
@@ -93,7 +94,8 @@ const filteredStatements = computed(() => {
 })
 
 const fetchAnalysisResult = async (analysisId) => {
-  const apiUrl = `https://staging.getjupita.com/api/${tenantId.value}/get-analysis-result?analysis_id=${analysisId};`
+  const apiUrl = `${import.meta.env.VITE_API_URL}
+/api/${tenantId.value}/get-analysis-result?analysis_id=${analysisId};`
 
   const raw = {
     analysis_id: analysisId

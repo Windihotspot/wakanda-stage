@@ -194,7 +194,8 @@ const fetchCreditChecks = async () => {
     : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
         ?.value
 
-  const API_URL = `https://staging.getjupita.com/api/${tenantId}/fetch-existing-credit-checks`
+  const API_URL = `${import.meta.env.VITE_API_URL}
+/api/${tenantId}/fetch-existing-credit-checks`
   isLoading.value = true
 
   try {
@@ -226,7 +227,8 @@ const submitIndividualForm = async () => {
     : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
         ?.value
 
-  const API_URL = `https://staging.getjupita.com/api/${tenant_id}/check-credit-history`
+  const API_URL = `${import.meta.env.VITE_API_URL}
+/api/${tenant_id}/check-credit-history`
   const isValid = await individualForm.value?.validate()
   if (!isValid) return
   try {
@@ -291,7 +293,8 @@ const submitCompanyForm = async () => {
     : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
         ?.value
 
-  const API_URL = `https://staging.getjupita.com/api/${tenant_id}/check-credit-history`
+  const API_URL = `${import.meta.env.VITE_API_URL}
+/api/${tenant_id}/check-credit-history`
 
   const isValid = await companyForm.value.validate()
   if (!isValid) return

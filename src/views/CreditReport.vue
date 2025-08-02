@@ -102,7 +102,7 @@ const fcbcEnquiryHistoryTopCount = ref(0)
 
 const fetchCreditReport = async (creditReportId) => {
   const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
-
+a
   const token = savedAuth ? savedAuth?.token : computed(() => authStore.token)?.value
 
   const tenantId = savedAuth
@@ -112,7 +112,8 @@ const fetchCreditReport = async (creditReportId) => {
     : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
         ?.value
 
-  const apiUrl = `https://staging.getjupita.com/api/${tenantId}/get-credit-check-key?unique_key=${creditReportId}`
+  const apiUrl = `${import.meta.env.VITE_API_URL}
+/api/${tenantId}/get-credit-check-key?unique_key=${creditReportId}`
   loading.value = true
 
   try {

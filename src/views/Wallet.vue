@@ -252,7 +252,8 @@ const tenantId = savedAuth
       authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id
     )?.value;
 
-  const API_URL = `https://staging.getjupita.com/api/${tenantId}/get-tenant-wallet`
+  const API_URL = `${import.meta.env.VITE_API_URL}
+/api/${tenantId}/get-tenant-wallet`
   isLoading.value = true
   try {
     const response = await axios.get(API_URL, {
@@ -288,7 +289,8 @@ const tenantId = savedAuth
     )?.value;
 
 
-  const API_URL = `https://staging.getjupita.com/api/${tenantId}/get-wallet-transactions`
+  const API_URL = `${import.meta.env.VITE_API_URL}
+/api/${tenantId}/get-wallet-transactions`
   isLoading.value = true
 
   try {
@@ -355,7 +357,8 @@ const tenantId = savedAuth
   //   return
   // }
 
-  const API_URL = `https://staging.getjupita.com/api/${tenantId}/initialize-payment`
+  const API_URL = `${import.meta.env.VITE_API_URL}
+/api/${tenantId}/initialize-payment`
   console.log('fund wallet amount:', amount.value)
   console.log('fund wallet token:', token)
 

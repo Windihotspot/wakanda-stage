@@ -43,7 +43,8 @@ const submitForm = async () => {
   console.log('Registration request:', registerForm.value)
 
   try {
-    const response = await axios.post('https://staging.getjupita.com/api/register-business', {
+    const response = await axios.post('${import.meta.env.VITE_API_URL}
+/api/register-business', {
       business_name: registerForm.value.business_name,
       business_email: registerForm.value.business_email,
       phone_number: registerForm.value.phone_number,

@@ -244,7 +244,8 @@ const uploadFile = async () => {
     formData.append('password', filePassword.value)
   }
 
-  const API_URL = `https://staging.getjupita.com/api/${tenantId}/bank-statement-analyze`
+  const API_URL = `${import.meta.env.VITE_API_URL}
+/api/${tenantId}/bank-statement-analyze`
 
   console.log('➡️ Uploading file...')
   for (const [key, value] of formData.entries()) {

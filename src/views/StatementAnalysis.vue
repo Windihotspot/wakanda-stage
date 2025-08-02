@@ -893,7 +893,8 @@ const tenantId = savedAuth
       authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id
     )?.value;
 
-  const apiUrl = `https://staging.getjupita.com/api/${tenantId}/get-analysis-result?analysis_id=${analysisId}`
+  const apiUrl = `${import.meta.env.VITE_API_URL}
+/api/${tenantId}/get-analysis-result?analysis_id=${analysisId}`
   loading.value = true
 
   try {
@@ -1303,7 +1304,8 @@ const tenantId = savedAuth
 
   const analysisId = route.params.id
 
-  const apiUrl = `https://staging.getjupita.com/api/${tenantId}/get-statement-transactions?analysis_id=${analysisId}`
+  const apiUrl = `${import.meta.env.VITE_API_URL}
+/api/${tenantId}/get-statement-transactions?analysis_id=${analysisId}`
 
   try {
     const response = await Axios.get(apiUrl, {
@@ -1418,7 +1420,8 @@ const tenantId = savedAuth
 
   const analysisId = route.params.id
 
-  const apiUrl = `https://staging.getjupita.com/api/${tenantId}/download-insight-report?analysis_id=${analysisId}`
+  const apiUrl = `${import.meta.env.VITE_API_URL}
+/api/${tenantId}/download-insight-report?analysis_id=${analysisId}`
 
   try {
     // Show persistent notification

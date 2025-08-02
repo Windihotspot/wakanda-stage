@@ -61,7 +61,8 @@ const acceptInvite = async () => {
 
   console.log('Payload:', payload)
 
-  const API_URL = `https://staging.getjupita.com/api/${tenantId}/accept-invite`
+  const API_URL = `${import.meta.env.VITE_API_URL}
+/api/${tenantId}/accept-invite`
 
   try {
     const response = await axios.post(

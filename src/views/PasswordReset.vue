@@ -332,7 +332,8 @@ const onSubmit = async () => {
 
     console.log('Payload:', payload);
 
-  const API_URL = `https://staging.getjupita.com/api/reset-password`
+  const API_URL = `${import.meta.env.VITE_API_URL}
+/api/reset-password`
   if (!validateForm()) {
     return
   }

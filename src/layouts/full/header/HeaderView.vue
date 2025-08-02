@@ -60,7 +60,8 @@ const logout = async () => {
 
   try {
     const response = await axios.post(
-      `https://staging.getjupita.com/api/${tenantId}/logout`,
+      `${import.meta.env.VITE_API_URL}
+/api/${tenantId}/logout`,
       {},
       {
         headers: {

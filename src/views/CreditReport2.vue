@@ -27,7 +27,8 @@ const fetchCreditReport = async (creditReportId) => {
     : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
         ?.value
 
-  const apiUrl = `https://staging.getjupita.com/api/${tenantId}/get-credit-check-key?unique_key=${creditReportId}`
+  const apiUrl = `${import.meta.env.VITE_API_URL}
+/api/${tenantId}/get-credit-check-key?unique_key=${creditReportId}`
   loading.value = true
 
   try {
@@ -69,7 +70,6 @@ const fetchCreditReport = async (creditReportId) => {
       summary.value = Array.isArray(rawSummary) && rawSummary.length > 0 ? rawSummary[0] : {}
       console.log('✅FCBC Summary:', summary.value)
 
-      // Credit Agreements
       // Credit Agreements
       const rawCreditAgreementSummary = fcbcCreditHistory?.CreditAgreementSummary ?? []
       creditAgreementSummary.value = rawCreditAgreementSummary.map((item) => ({
