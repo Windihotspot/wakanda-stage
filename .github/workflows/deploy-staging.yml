@@ -29,6 +29,6 @@ jobs:
         with:
           personal_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           external_repository: Windihotspot/wakanda
-          publish_branch: gh-pages-staging
+          publish_branch: staging
           publish_dir: ./dist
           cname: staging.app.getjupita.com
