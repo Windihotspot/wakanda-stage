@@ -68,14 +68,14 @@ const acceptInvite = async () => {
     const response = await axios.post(
       API_URL,
       payload,
-    console.log("response:", response)
+   
       {
         headers: {
           Authorization: `Bearer ${token}`
         }
       }
     )
-   
+    console.log("response:", response)
     ElNotification({
       title: 'Success',
       message: response.data.message || 'Invite accepted successfully!',
