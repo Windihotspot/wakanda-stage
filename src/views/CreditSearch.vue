@@ -3,6 +3,8 @@ import { ref, computed, onMounted, watch } from 'vue'
 import MainLayout from '@/layouts/full/MainLayout.vue'
 import moment from 'moment'
 import Axios from 'axios'
+import { useAuthStore } from '@/stores/auth'
+const authStore = useAuthStore()
 import { useRouter } from 'vue-router'
 const router = useRouter()
 import { ElLoading, ElNotification } from 'element-plus'
@@ -129,9 +131,8 @@ const enquiryReasonIndividual = ref('')
 const bvnIndividual = ref('')
 const consentIndividual = ref(false)
 const reportOptionsIndividual = ref([
-  { label: 'First Central', value: 'first_central', checked: true },
-  { label: 'Credit Registry', value: 'credit_registry', checked: true },
- 
+  { label: 'First Central', value: 'fcbc', checked: true },
+  { label: 'Credit Registry', value: 'credit_registry', checked: true }
 ])
 
 // Company
@@ -141,7 +142,7 @@ const businessName = ref('')
 const consentCompany = ref(false)
 const reportOptionsCompany = ref([
   { label: 'First Central', value: 'first_central', checked: true },
-  { label: 'Credit Registry', value: 'credit_registry', checked: true },
+  { label: 'Credit Registry', value: 'credit_registry', checked: true }
 ])
 
 const fireConfetti = () => {
@@ -184,7 +185,6 @@ const resetCompanyForm = () => {
 const fetchCreditChecks = async () => {
   const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
 
-
   const token = savedAuth ? savedAuth?.token : computed(() => authStore.token)?.value
 
   const tenantId = savedAuth
@@ -217,7 +217,6 @@ const individualForm = ref()
 const submitIndividualForm = async () => {
   const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
 
-
   const token = savedAuth ? savedAuth?.token : computed(() => authStore.token)?.value
 
   const tenant_id = savedAuth
@@ -233,12 +232,18 @@ const submitIndividualForm = async () => {
   if (!isValid) return
   try {
     loading.value = true
+    const selectedServices = reportOptionsIndividual.value
+      .filter((option) => option.checked)
+      .map((option) => option.value)
+
+    console.log('✅ Selected services:', selectedServices)
+
     const payload = {
       id_type: 'individual',
       id_string: bvnIndividual.value,
       purpose: enquiryReasonIndividual.value,
       refresh: true,
-      services: ['credit_registry', 'fcbc']
+      services: selectedServices
     }
 
     console.log('Sending credit check request payload:', payload)
@@ -282,7 +287,6 @@ const formValid = ref(false)
 const companyForm = ref()
 const submitCompanyForm = async () => {
   const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
-
 
   const token = savedAuth ? savedAuth?.token : computed(() => authStore.token)?.value
 
@@ -607,15 +611,11 @@ onMounted(() => {
                   </div>
 
                   <div
-                   style="height: 500px"
+                    style="height: 500px"
                     v-if="loading"
                     class="absolute mt-6 inset-0 bg-white bg-opacity-90 flex flex-col items-center justify-center z-50 p-6 space-y-4 rounded-lg"
                   >
-                    <img
-                      src="/src/assets/relax.png"
-                      class="w-28 mb-2 object-contain"
-                      alt=""
-                    />
+                    <img src="/src/assets/relax.png" class="w-28 mb-2 object-contain" alt="" />
                     <p class="text-md font-semibold text-center">
                       🧘Please sit and relax while we process your credit search…
                     </p>

@@ -25,7 +25,6 @@ export const useAuthStore = defineStore('auth', {
       this.token = data.token || null
       this.verification_status = data.user?.verification_status || null
 
-      // Store the full user data
       this.user = data.user || {}
 
       if (data.token) {
@@ -39,8 +38,22 @@ export const useAuthStore = defineStore('auth', {
         axios.defaults.headers.common['Authorization'] = `Bearer ${this.token}`
         axios.defaults.headers.common['Accept'] = 'application/json'
       }
+    },
+
+    clearAuthData() {
+      this.id = null
+      this.token = null
+      this.verification_status = null
+      this.user = null
+
+      // Clear axios default auth headers
+      delete axios.defaults.headers.common['Authorization']
+
+      // Optional: Clear anything manually added to localStorage (if any)
+      localStorage.removeItem('token')
+      localStorage.removeItem('data') // already done in useAutoLogout, but safe to repeat
     }
   },
 
-  persist: true // Ensure data persists across reloads (optional)
+  persist: true
 })

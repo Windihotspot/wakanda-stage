@@ -1,6 +1,6 @@
 <script setup>
 import MainLayout from '@/layouts/full/MainLayout.vue'
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 const route = useRoute()
 const activeTab = ref('first_central')
@@ -34,6 +34,20 @@ const inquiryHistory = ref([])
 
 const businessData = ref({})
 const directors = ref([])
+
+// credit registry
+const creditPersonal = ref({
+  Surname: '',
+  FirstName: '',
+  OtherNames: '',
+  Gender: '',
+  BirthDate: '',
+  BankVerificationNo: '',
+  WorkTelephoneNo: '',
+  HomeTelephoneNo: '',
+  CellularNo: '',
+  ResidentialAddress1: ''
+})
 
 function formatNaira(value) {
   if (!value) return '₦0.00'
@@ -87,18 +101,10 @@ const mergeFcbcArray = (arr) => {
 }
 
 // FCBC section counts (for use in template)
-const fcbcSubjectListCount = ref(0)
-const fcbcBusinessDataCount = ref(0)
+
 const fcbcHighestDelinquencyRatingCount = ref(0)
-const fcbcFacilityPerformanceSummaryCount = ref(0)
-const fcbcDirectorInformationCount = ref(0)
-const fcbcAccountMonthlyPaymentHistoryCount = ref(0)
-const fcbcAccountMonthlyPaymentHistoryHeaderCount = ref(0)
-const fcbcAdditionalContactHistoryCount = ref(0)
-const fcbcAddressHistoryCount = ref(0)
+
 const fcbcCreditAgreementSummaryCount = ref(0)
-const fcbcEnquiryDetailsCount = ref(0)
-const fcbcEnquiryHistoryTopCount = ref(0)
 
 const fetchCreditReport = async (creditReportId) => {
   const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
@@ -126,385 +132,356 @@ const fetchCreditReport = async (creditReportId) => {
 
     const report = response.data.data
     console.log('🟢 Full Report:', report)
+    let fcbcCreditHistory = null
+
     const creditHistory = report?.credit_history
-    idType.value = creditHistory.id_type
-    const rawFcbc = creditHistory?.fcbc_credit_history
-    const normalizedFcbc = normalizeFcbcInput(rawFcbc)
-    console.log('🔍 Normalized FCBC:', normalizedFcbc)
-    const creditRegistryHistory = creditHistory?.credit_registry_history.AccountData
-    console.log('🔍 typeof rawFcbc:', typeof rawFcbc)
-    console.log('🔍 rawFcbc isArray:', Array.isArray(rawFcbc))
-    console.log('✅ FCBC raw(array)Data:', rawFcbc)
-    console.log('✅ Credit Registry History Data:', creditRegistryHistory)
+    idType.value = creditHistory?.id_type
     console.log('📌 idType', idType.value)
 
-    const fcbcCreditHistory = mergeFcbcArray(normalizedFcbc)
-    console.log('✅ Merged FCBC Object:', fcbcCreditHistory)
+    // ---------------------- FCBC Handling ----------------------
+    const rawFcbc = creditHistory?.fcbc_credit_history
+    if (rawFcbc) {
+      console.log('✅ FCBC raw(array)Data:', rawFcbc)
+      console.log('🔍 typeof rawFcbc:', typeof rawFcbc)
+      console.log('🔍 rawFcbc isArray:', Array.isArray(rawFcbc))
+
+      const normalizedFcbc = normalizeFcbcInput(rawFcbc)
+      console.log('🔍 Normalized FCBC:', normalizedFcbc)
+
+      // ---------------------- Fcbc Handling ----------------------
+      const fcbcCreditHistory = mergeFcbcArray(normalizedFcbc)
+      console.log('✅ Merged FCBC Object:', fcbcCreditHistory)
+
+      if (idType.value === 'business') {
+        fcbcHighestDelinquencyRatingCount.value = Array.isArray(
+          fcbcCreditHistory.HighestDelinquencyRating
+        )
+          ? fcbcCreditHistory.HighestDelinquencyRating.length
+          : 0
+
+        fcbcCreditAgreementSummaryCount.value = Array.isArray(
+          fcbcCreditHistory.CreditAgreementSummary
+        )
+          ? fcbcCreditHistory.CreditAgreementSummary.length
+          : 0
+
+        const businessDataArray = fcbcCreditHistory?.BusinessData || []
+        const directorInfoArray = fcbcCreditHistory?.DirectorInformation || []
+
+        businessData.value = businessDataArray[0] || {}
+        directors.value = directorInfoArray
+
+        console.log('✅FCBC BusinessData:', businessData.value)
+        console.log('✅FCBC Directors:', directors.value)
+
+        const rawSummary = fcbcCreditHistory?.CreditAccountSummary
+        summary.value = Array.isArray(rawSummary) && rawSummary.length > 0 ? rawSummary[0] : {}
+        console.log('✅FCBC Summary:', summary.value)
+
+        const rawCreditAgreementSummary = fcbcCreditHistory?.CreditAgreementSummary ?? []
+        creditAgreementSummary.value = rawCreditAgreementSummary.map((item, index) => ({
+          uid: `${item.AccountNo || 'acc'}-${index}`,
+          lender: item.SubscriberName,
+          date: moment(item.DateAccountOpened).format('DD/MM/YYYY'),
+          amount: formatNaira(item.OpeningBalanceAmt ?? '0'),
+          balance: formatNaira(item.CurrentBalanceAmt ?? '0'),
+          status: item.AccountStatus,
+          accountNo: item.AccountNo,
+          closedDate: moment(item.ClosedDate).format('DD/MM/YYYY'),
+          duration: item.LoanDuration,
+          repaymentFrequency: item.RepaymentFrequency,
+          overdue: formatNaira(item.AmountOverdue),
+          instalment: formatNaira(item.InstalmentAmount),
+          performanceStatus: item.PerformanceStatus,
+          currency: item.Currency
+        }))
+        console.log('✅FCBC Credit Agreement Summary:', creditAgreementSummary.value)
+
+        const rawEnquiryHistoryTop = fcbcCreditHistory?.EnquiryHistoryTop ?? []
+        enquiryHistory.value = rawEnquiryHistoryTop
+          .filter((item) => item.SubscriberName?.trim() && item.DateRequested?.trim())
+          .map((item) => ({
+            lender: item.SubscriberName.trim(),
+            date: moment(item.DateRequested).format('DD/MM/YYYY'),
+            rawDate: moment(item.LastUpdatedDate)
+          }))
+        console.log('✅ FCBC Enquiry History (cleaned):', enquiryHistory.value)
+
+        const rawEmploymentHistory = fcbcCreditHistory?.EmploymentHistory ?? []
+        employmentHistory.value = rawEmploymentHistory.map((item) => ({
+          employerName: item.EmployerDetail,
+          date: moment(item.UpdateDate).format('DD/MM/YYYY'),
+          rawDate: moment(item.UpdateDate)
+        }))
+        console.log('✅FCBC Employment History:', employmentHistory.value)
+
+        const rawAddressHistory = fcbcCreditHistory?.AddressHistory ?? []
+        addressHistory.value = rawAddressHistory.map((item) => ({
+          address: [
+            item.CommercialAddress1,
+            item.CommercialAddress2,
+            item.CommercialAddress3,
+            item.CommercialAddress4
+          ]
+            .map((part) => part?.trim())
+            .filter((part) => part)
+            .join(', '),
+          date: item.UpDateOnDate || ''
+        }))
+        console.log('✅FCBC Address History:', addressHistory.value)
+      } else if (idType.value === 'individual') {
+        fcbcHighestDelinquencyRatingCount.value = Array.isArray(
+          fcbcCreditHistory.HighestDelinquencyRating
+        )
+          ? fcbcCreditHistory.HighestDelinquencyRating.length
+          : 0
+
+        fcbcCreditAgreementSummaryCount.value = Array.isArray(
+          fcbcCreditHistory.CreditAgreementSummary
+        )
+          ? fcbcCreditHistory.CreditAgreementSummary.length
+          : 0
+
+        const rawSummary = fcbcCreditHistory?.CreditAccountSummary
+        summary.value = Array.isArray(rawSummary) && rawSummary.length > 0 ? rawSummary[0] : {}
+        console.log('✅FCBC Summary (Individual):', summary.value)
+
+        const rawPersonalDetails = fcbcCreditHistory?.PersonalDetailsSummary ?? []
+        personal.value =
+          Array.isArray(rawPersonalDetails) && rawPersonalDetails.length > 0
+            ? rawPersonalDetails[0]
+            : {}
+
+        console.log('✅ FCBC Personal Details (Individual):', personal.value)
+
+        const rawCreditAgreementSummary = fcbcCreditHistory?.CreditAgreementSummary ?? []
+        creditAgreementSummary.value = rawCreditAgreementSummary.map((item, index) => ({
+          uid: `${item.AccountNo || 'acc'}-${index}`,
+          lender: item.SubscriberName,
+          date: moment(item.DateAccountOpened).format('DD/MM/YYYY'),
+          amount: formatNaira(item.OpeningBalanceAmt ?? '0'),
+          balance: formatNaira(item.CurrentBalanceAmt ?? '0'),
+          status: item.AccountStatus,
+          accountNo: item.AccountNo,
+          closedDate: moment(item.ClosedDate).format('DD/MM/YYYY'),
+          duration: item.LoanDuration,
+          repaymentFrequency: item.RepaymentFrequency,
+          overdue: formatNaira(item.AmountOverdue),
+          instalment: formatNaira(item.InstalmentAmount),
+          performanceStatus: item.PerformanceStatus,
+          currency: item.Currency
+        }))
+        console.log('✅FCBC Credit Agreement Summary (Individual):', creditAgreementSummary.value)
+
+        const rawEnquiryHistoryTop = fcbcCreditHistory?.EnquiryHistoryTop ?? []
+        enquiryHistory.value = rawEnquiryHistoryTop
+          .filter((item) => item.SubscriberName?.trim() && item.DateRequested?.trim())
+          .map((item) => ({
+            lender: item.SubscriberName.trim(),
+            date: moment(item.DateRequested).format('DD/MM/YYYY'),
+            rawDate: moment(item.LastUpdatedDate)
+          }))
+        console.log('✅ FCBC Enquiry History (Individual):', enquiryHistory.value)
+
+        const rawEmploymentHistory = fcbcCreditHistory?.EmploymentHistory ?? []
+        employmentHistory.value = rawEmploymentHistory.map((item) => ({
+          employerName: item.EmployerDetail,
+          date: moment(item.UpdateDate).format('DD/MM/YYYY'),
+          rawDate: moment(item.UpdateDate)
+        }))
+        console.log('✅FCBC Employment History (Individual):', employmentHistory.value)
+
+        const rawAddressHistory = fcbcCreditHistory?.AddressHistory ?? []
+        addressHistory.value = rawAddressHistory.map((item) => ({
+          address: [
+            item.CommercialAddress1,
+            item.CommercialAddress2,
+            item.CommercialAddress3,
+            item.CommercialAddress4
+          ]
+            .map((part) => part?.trim())
+            .filter((part) => part)
+            .join(', '),
+          date: item.UpDateOnDate || ''
+        }))
+        console.log('✅FCBC Address History (Individual):', addressHistory.value)
+      }
+    } else {
+      console.warn('⚠️ No FCBC credit history found')
+    }
+
+    // ---------------------- Credit Registry Handling ----------------------
+    const creditRegistryHistory = creditHistory?.credit_registry_history?.AccountData
+    console.log('🟠 Credit Registry AccountData:', creditRegistryHistory)
+    if (!creditRegistryHistory) {
+      console.warn('⚠️ No Credit Registry data found')
+      return
+    }
 
     if (idType.value === 'business') {
-      fcbcHighestDelinquencyRatingCount.value = Array.isArray(
-        fcbcCreditHistory.HighestDelinquencyRating
-      )
-        ? fcbcCreditHistory.HighestDelinquencyRating.length
-        : 0
+      // business
 
-      fcbcCreditAgreementSummaryCount.value = Array.isArray(
-        fcbcCreditHistory.CreditAgreementSummary
-      )
-        ? fcbcCreditHistory.CreditAgreementSummary.length
-        : 0
-      // Business specific extraction
-      const businessDataArray = fcbcCreditHistory?.BusinessData || []
-      const directorInfoArray = fcbcCreditHistory?.DirectorInformation || []
-
-      businessData.value = businessDataArray[0] || {}
-      directors.value = directorInfoArray
-
-      console.log('✅FCBC BusinessData:', businessData.value)
-      console.log('✅FCBC Directors:', directors.value)
+      // Directors
 
       // Summary
-      const rawSummary = fcbcCreditHistory?.CreditAccountSummary
-      summary.value = Array.isArray(rawSummary) && rawSummary.length > 0 ? rawSummary[0] : {}
-      console.log('✅FCBC Summary:', summary.value)
 
-      // Credit Agreements
-      const rawCreditAgreementSummary = fcbcCreditHistory?.CreditAgreementSummary ?? []
-      creditAgreementSummary.value = rawCreditAgreementSummary.map((item, index) => ({
-        uid: `${item.AccountNo || 'acc'}-${index}`,
-        lender: item.SubscriberName,
-        date: moment(item.DateAccountOpened).format('DD/MM/YYYY'),
-        amount: formatNaira(item.OpeningBalanceAmt ?? '0'),
-        balance: formatNaira(item.CurrentBalanceAmt ?? '0'),
-        status: item.AccountStatus,
-
-        // Additional fields for dropdown
-        accountNo: item.AccountNo,
-        closedDate: moment(item.ClosedDate).format('DD/MM/YYYY'),
-        duration: item.LoanDuration,
-        repaymentFrequency: item.RepaymentFrequency,
-        overdue: formatNaira(item.AmountOverdue),
-        instalment: formatNaira(item.InstalmentAmount),
-        performanceStatus: item.PerformanceStatus,
-        currency: item.Currency
-      }))
-
-      console.log('✅FCBC Credit Agreement Summary:', creditAgreementSummary.value)
-
-      // Enquiry history
-      const rawEnquiryHistoryTop = fcbcCreditHistory?.EnquiryHistoryTop ?? []
-
-      enquiryHistory.value = rawEnquiryHistoryTop
-        .filter((item) => {
-          const lender = item.SubscriberName?.trim()
-          const date = item.DateRequested?.trim()
-          return lender && date // Keep only entries with valid lender and date
-        })
-        .map((item) => ({
-          lender: item.SubscriberName.trim(),
-          date: moment(item.DateRequested).format('DD/MM/YYYY'),
-          rawDate: moment(item.LastUpdatedDate)
-        }))
-
-      console.log('✅ FCBC Enquiry History (cleaned):', enquiryHistory.value)
-
-      // Employment history
-      const rawEmploymentHistory = fcbcCreditHistory?.EmploymentHistory ?? []
-      employmentHistory.value = rawEmploymentHistory.map((item) => ({
-        employerName: item.EmployerDetail,
-        date: moment(item.UpdateDate).format('DD/MM/YYYY'),
-        rawDate: moment(item.UpdateDate)
-      }))
-      console.log('✅FCBC Employment History:', employmentHistory.value)
-
-      // Address history
-      const rawAddressHistory = fcbcCreditHistory?.AddressHistory ?? []
-      addressHistory.value = rawAddressHistory.map((item) => ({
-        address: [
-          item.CommercialAddress1,
-          item.CommercialAddress2,
-          item.CommercialAddress3,
-          item.CommercialAddress4
-        ]
-          .map((part) => part?.trim()) // remove leading/trailing spaces
-          .filter((part) => part) // remove empty or whitespace-only
-          .join(', '),
-        date: item.UpDateOnDate || ''
-      }))
-
-      console.log('✅FCBC Address History:', addressHistory.value)
-
-      // credit registry
-
-      // performing accounts
-      if (creditRegistryHistory && Array.isArray(creditRegistryHistory.PerformingAccounts)) {
+      // Performing Accounts
+      if (Array.isArray(creditRegistryHistory.PerformingAccounts)) {
         loanAccounts.value = creditRegistryHistory.PerformingAccounts.map((account, index) => ({
           uid: `${account.Account_No || 'acc'}-${index}`,
           lender: account.CreditorName,
           date: moment(account.Date_Opened).format('DD/MM/YYYY'),
-          amount: formatNaira(account.Credit_Limit || 0),
-          balance: formatNaira(account.Balance || 0),
+          amount: account.Credit_Limit || 0,
+          balance: account.Balance || 0,
           status: account.Account_Status || 'Performing',
-          raw: account, // optional for future use
-
-          // Additional fields for dropdown
+          raw: account,
           accountNo: account.Account_No,
           closedDate: moment(account.Balance_Date).format('DD/MM/YYYY'),
           duration: account.Term,
           repaymentFrequency: account.RepaymentFrequency,
-          overdue: formatNaira(account.AmountOverdue),
-          instalment: formatNaira(account.Minimum_Installment),
+          overdue: account.AmountOverdue,
+          instalment: account.Minimum_Installment,
           performanceStatus: account.Account_Status,
           currency: account.Currency
         }))
-
-        console.log('✅credit registry performing accounts:', loanAccounts.value)
+        console.log('✅ Credit Registry Performing Accounts:', loanAccounts.value)
       } else {
-        console.warn('⚠️credit registry PerformingAccounts not found')
+        console.warn('⚠️ No PerformingAccounts found')
       }
-      // Delinquents Accounts Mapping
+
+      // Delinquent Accounts
       if (Array.isArray(creditRegistryHistory.DelinquentAccounts)) {
-        delinquentAccounts.value = creditRegistryHistory.DelinquentAccounts.map((account) => ({
-          lender: account.CreditorName,
-          date: moment(account.Date_Opened).format('DD/MM/YYYY'),
-          amount: formatNaira(account.CredidelinquentAccountst_Limit || 0),
-          balance: formatNaira(account.Balance || 0),
-          status: account.Account_Status || 'Delinquent',
-          raw: account,
-
-          // Additional fields for dropdown
-          accountNo: account.Account_No,
-          closedDate: account.Balance_Date,
-          duration: account.Term,
-          repaymentFrequency: account.RepaymentFrequency,
-          overdue: formatNaira(account.AmountOverdue),
-          instalment: account.Minimum_Installment,
-          performanceStatus: account.Account_Status,
-          currency: account.Currency
-        }))
-
-        console.log('✅credit registry Delinquents Accounts:', delinquentAccounts.value)
+        delinquentAccounts.value = creditRegistryHistory.DelinquentAccounts.map(
+          (account, index) => ({
+            uid: `${account.Account_No || 'acc'}-${index}`,
+            lender: account.CreditorName,
+            date: moment(account.Date_Opened).format('DD/MM/YYYY'),
+            amount: account.Credit_Limit || 0,
+            balance: account.Balance || 0,
+            status: account.Account_Status || 'Delinquent',
+            raw: account
+          })
+        )
+        console.log('✅ Credit Registry Delinquent Accounts:', delinquentAccounts.value)
       } else {
-        console.warn('⚠️credit registry Delinquents accounts not found')
+        console.warn('⚠️ No DelinquentAccounts found')
       }
 
-      // Closed Accounts Mapping
-      if (Array.isArray(creditRegistryHistory.closedAccounts)) {
-        closedAccounts.value = creditRegistryHistory.ClosedAccounts.map((account) => ({
+      // Closed Accounts
+      if (Array.isArray(creditRegistryHistory.ClosedAccounts)) {
+        closedAccounts.value = creditRegistryHistory.ClosedAccounts.map((account, index) => ({
+          uid: `${account.Account_No || 'acc'}-${index}`,
           lender: account.CreditorName,
           date: moment(account.Date_Opened).format('DD/MM/YYYY'),
           amount: account.Credit_Limit || 0,
           balance: account.Balance || 0,
-          status: account.Account_Status || 'closed',
-          raw: account,
-
-          // Additional fields for dropdown
-          accountNo: account.Account_No,
-          closedDate: account.Balance_Date,
-          duration: account.Term,
-          repaymentFrequency: account.RepaymentFrequency,
-          overdue: account.AmountOverdue,
-          instalment: account.Minimum_Installment,
-          performanceStatus: account.Account_Status,
-          currency: account.Currency
+          status: account.Account_Status || 'Closed',
+          raw: account
         }))
-
-        console.log('✅credit registry Closed Accounts:', closedAccounts.value)
+        console.log('✅ Credit Registry Closed Accounts:', closedAccounts.value)
       } else {
-        console.warn('⚠️credit registry Closed accounts not found')
+        console.warn('⚠️ No ClosedAccounts found')
       }
 
-      // derogatory accounts
+      // Derogatory Accounts
       if (Array.isArray(creditRegistryHistory.DerogatoryAccounts)) {
-        derogatoryAccounts.value = creditRegistryHistory.DerogatoryAccounts.map((account) => ({
+        derogatoryAccounts.value = creditRegistryHistory.DerogatoryAccounts.map(
+          (account, index) => ({
+            uid: `${account.Account_No || 'acc'}-${index}`,
+            lender: account.CreditorName,
+            date: moment(account.Date_Opened).format('DD/MM/YYYY'),
+            amount: account.Credit_Limit || 0,
+            balance: account.Balance || 0,
+            status: account.Account_Status || 'Derogatory',
+            raw: account
+          })
+        )
+        console.log('✅ Credit Registry Derogatory Accounts:', derogatoryAccounts.value)
+      } else {
+        console.warn('⚠️ No DerogatoryAccounts found')
+      }
+
+      // Written Off Accounts
+      if (Array.isArray(creditRegistryHistory.WrittenOffAccounts)) {
+        writtenOffAccounts.value = creditRegistryHistory.WrittenOffAccounts.map(
+          (account, index) => ({
+            uid: `${account.Account_No || 'acc'}-${index}`,
+            lender: account.CreditorName,
+            date: moment(account.Date_Opened).format('DD/MM/YYYY'),
+            amount: account.Credit_Limit || 0,
+            balance: account.Balance || 0,
+            status: account.Account_Status || 'Written Off',
+            raw: account
+          })
+        )
+        console.log('✅ Credit Registry Written Off Accounts:', writtenOffAccounts.value)
+      } else {
+        console.warn('⚠️ No WrittenOffAccounts found')
+      }
+
+      // Unknown Status Accounts
+      if (Array.isArray(creditRegistryHistory.unknownAccounts)) {
+        unknownAccounts.value = creditRegistryHistory.unknownAccounts.map((account, index) => ({
+          uid: `${account.Account_No || 'acc'}-${index}`,
           lender: account.CreditorName,
           date: moment(account.Date_Opened).format('DD/MM/YYYY'),
           amount: account.Credit_Limit || 0,
           balance: account.Balance || 0,
-          status: account.Account_Status || 'Derogatory',
-          raw: account,
-
-          // Additional fields for dropdown
-          accountNo: account.Account_No,
-          closedDate: account.Balance_Date,
-          duration: account.Term,
-          repaymentFrequency: account.RepaymentFrequency,
-          overdue: account.AmountOverdue,
-          instalment: account.Minimum_Installment,
-          performanceStatus: account.Account_Status,
-          currency: account.Currency
+          status: account.Account_Status || 'Unknown',
+          raw: account
         }))
-
-        console.log('✅credit registry Derogatory Accounts:', derogatoryAccounts.value)
+        console.log('✅ Credit Registry Unknown Status Accounts:', unknownAccounts.value)
       } else {
-        console.warn('⚠️credit registry DerogatoryAccounts not found')
+        console.warn('⚠️ No unknownAccounts found')
       }
 
-      // Written off accounts
-      if (creditRegistryHistory && Array.isArray(creditRegistryHistory.WrittenOffAccounts)) {
-        writtenOffAccounts.value = creditRegistryHistory.WrittenOffAccounts.map((account) => ({
-          lender: account.CreditorName || 'N/A',
-          date: moment(account.Date_Opened).format('DD/MM/YYYY'),
-          amount: account.Credit_Limit || 0,
-          balance: account.Balance || 0,
-          raw: account, // optional for future use
-
-          // Additional fields for dropdown
-          accountNo: account.Account_No,
-          closedDate: account.Balance_Date,
-          duration: account.Term,
-          repaymentFrequency: account.RepaymentFrequency,
-          overdue: account.AmountOverdue,
-          instalment: account.Minimum_Installment,
-          performanceStatus: account.Account_Status,
-          currency: account.Currency
-        }))
-
-        console.log('✅credit registry writtenOffAccounts:', writtenOffAccounts.value)
-      } else {
-        console.warn('⚠️credit registry WrittenOffAccounts not found or invalid')
-      }
-
-      // Unknown Accounts
-      if (creditRegistryHistory && Array.isArray(creditRegistryHistory.UnknownStatusAccounts)) {
-        unknownAccounts.value = creditRegistryHistory.UnknownStatusAccounts.map((account) => ({
-          lender: account.CreditorName || 'N/A',
-          date: moment(account.Date_Opened).format('DD/MM/YYYY'),
-          amount: account.Credit_Limit || 0,
-          balance: account.Balance || 0,
-          raw: account, // optional for future use
-
-          // Additional fields for dropdown
-          accountNo: account.Account_No,
-          closedDate: account.Balance_Date,
-          duration: account.Term,
-          repaymentFrequency: account.RepaymentFrequency,
-          overdue: account.AmountOverdue,
-          instalment: account.Minimum_Installment,
-          performanceStatus: account.Account_Status,
-          currency: account.Currency
-        }))
-
-        console.log('✅credit registry unknownaccounts:', unknownAccounts.value)
-      } else {
-        console.warn('⚠️credit registry UnknownStatusAccounts not found or invalid')
-      }
       // Inquiry History
-      if (creditRegistryHistory.InquiryHistory?.length) {
-        inquiryHistory.value = creditRegistryHistory.InquiryHistory.map((entry) => ({
+      if (Array.isArray(creditRegistryHistory.InquiryHistory)) {
+        inquiryHistory.value = creditRegistryHistory.InquiryHistory.map((entry, index) => ({
+          uid: `inq-${index}`,
           subscriber: entry.Subscriber || 'Unknown',
           date: moment(entry.InquiryDate).format('DD/MM/YYYY'),
           phone: entry.ContactPhone || 'N/A',
           reason: entry.Reason || 'N/A',
           raw: entry
         }))
-        console.log('✅credit registry Inquiry History:', inquiryHistory.value)
+        console.log('✅ Credit Registry Inquiry History:', inquiryHistory.value)
+      } else {
+        console.warn('⚠️ No InquiryHistory found')
       }
-    } else {
-      // Individual logic
-      fcbcHighestDelinquencyRatingCount.value = Array.isArray(
-        fcbcCreditHistory.DeliquencyInformation
-      )
-        ? fcbcCreditHistory.DeliquencyInformation.length
-        : 0
+    } else if (idType.value === 'individual') {
+      // personal
+      const crRaw = creditHistory?.credit_registry_history?.PersonalDetail
 
-      fcbcCreditAgreementSummaryCount.value = Array.isArray(
-        fcbcCreditHistory.CreditAgreementSummary
-      )
-        ? fcbcCreditHistory.CreditAgreementSummary.length
-        : 0
+      if (crRaw) {
+        const [surname = '', first = '', other = ''] = (crRaw.Name || '').trim().split(/\s+/)
 
-      // FCBC
-      // Personal Details
-      const rawPersonal = fcbcCreditHistory?.PersonalDetailsSummary
-      personal.value = Array.isArray(rawPersonal) && rawPersonal.length > 0 ? rawPersonal[0] : {}
-      console.log('✅FCBC Personal:', personal.value)
+        creditPersonal.value = {
+          Surname: surname,
+          FirstName: first,
+          OtherNames: other,
+          Gender: crRaw.Gender || '',
+          BirthDate: crRaw.DOBI ? moment(crRaw.DOBI).format('DD/MM/YYYY') : '',
+          BankVerificationNo: '',
+          WorkTelephoneNo: Array.isArray(crRaw.PhoneNumbers) ? crRaw.PhoneNumbers[1] || '' : '',
+          HomeTelephoneNo: Array.isArray(crRaw.PhoneNumbers) ? crRaw.PhoneNumbers[1] || '' : '',
+          CellularNo: Array.isArray(crRaw.PhoneNumbers) ? crRaw.PhoneNumbers[0] || '' : '',
+          ResidentialAddress1: crRaw.Address?.replace(/\r\n/g, ', ') || ''
+        }
+      }
 
-      // Summary
-      const rawSummary = fcbcCreditHistory?.CreditAccountSummary
-      summary.value = Array.isArray(rawSummary) && rawSummary.length > 0 ? rawSummary[0] : {}
-      console.log('✅FCBC Summary:', summary.value)
+      // summary
 
-      // Credit Agreements
-      const rawCreditAgreementSummary = fcbcCreditHistory?.CreditAgreementSummary ?? []
-      creditAgreementSummary.value = rawCreditAgreementSummary.map((item, index) => ({
-        uid: `${item.AccountNo || 'acc'}-${index}`,
-        lender: item.SubscriberName,
-        date: moment(item.DateAccountOpened).format('DD/MM/YYYY'),
-        amount: parseFloat(item.OpeningBalanceAmt ?? '0'),
-        balance: parseFloat(item.CurrentBalanceAmt ?? '0'),
-        status: item.AccountStatus,
-
-        // Additional fields for dropdown
-        accountNo: item.AccountNo,
-        closedDate: moment(item.ClosedDate).format('DD/MM/YYYY'),
-        duration: item.LoanDuration,
-        repaymentFrequency: item.RepaymentFrequency,
-        overdue: item.AmountOverdue,
-        instalment: item.InstalmentAmount,
-        performanceStatus: item.PerformanceStatus,
-        currency: item.Currency
-      }))
-
-      console.log('✅FCBC Credit Agreement Summary:', creditAgreementSummary.value)
-
-      // Enquiry history
-      const rawEnquiryHistoryTop = fcbcCreditHistory?.EnquiryHistoryTop ?? []
-      enquiryHistory.value = rawEnquiryHistoryTop.map((item) => ({
-        lender: item.SubscriberName,
-        date: moment(item.DateRequested).format('DD/MM/YYYY'),
-        rawDate: moment(item.LastUpdatedDate)
-      }))
-      console.log('✅FCBC Enquiry History:', enquiryHistory.value)
-
-      // Employment history
-      const rawEmploymentHistory = fcbcCreditHistory?.EmploymentHistory ?? []
-
-      employmentHistory.value = rawEmploymentHistory
-        .filter((item) => {
-          const employer = item.EmployerDetail?.trim()
-          const date = item.UpdateDate?.trim()
-          return employer && date
-        })
-        .map((item) => ({
-          employerName: item.EmployerDetail.trim(),
-          date: moment(item.UpdateDate).format('DD/MM/YYYY'),
-          rawDate: moment(item.UpdateDate)
-        }))
-
-      console.log('✅ FCBC Employment History (cleaned):', employmentHistory.value)
-
-      // Address history
-      const rawAddressHistory = fcbcCreditHistory?.AddressHistory ?? []
-      addressHistory.value = rawAddressHistory.map((item) => ({
-        address: [
-          item.CommercialAddress1,
-          item.CommercialAddress2,
-          item.CommercialAddress3,
-          item.CommercialAddress4
-        ]
-          .map((part) => part?.trim()) // remove leading/trailing spaces
-          .filter((part) => part) // remove empty or whitespace-only
-          .join(', '),
-        date: item.UpDateOnDate || ''
-      }))
-
-      console.log('✅FCBC Address History:', addressHistory.value)
-
-      // credit registry
-
-      // performing accounts
-      if (creditRegistryHistory && Array.isArray(creditRegistryHistory.PerformingAccounts)) {
+      // Performing Accounts
+      if (Array.isArray(creditRegistryHistory.PerformingAccounts)) {
         loanAccounts.value = creditRegistryHistory.PerformingAccounts.map((account, index) => ({
-          uid: `${account.AccountNo || 'acc'}-${index}`,
+          uid: `${account.Account_No || 'acc'}-${index}`,
           lender: account.CreditorName,
           date: moment(account.Date_Opened).format('DD/MM/YYYY'),
           amount: account.Credit_Limit || 0,
           balance: account.Balance || 0,
           status: account.Account_Status || 'Performing',
-          raw: account, // optional for future use
-
-          // Additional fields for dropdown
+          raw: account,
           accountNo: account.Account_No,
           closedDate: moment(account.Balance_Date).format('DD/MM/YYYY'),
           duration: account.Term,
@@ -514,148 +491,110 @@ const fetchCreditReport = async (creditReportId) => {
           performanceStatus: account.Account_Status,
           currency: account.Currency
         }))
-
-        console.log('✅credit registry performing accounts:', loanAccounts.value)
+        console.log('✅ Credit Registry Performing Accounts:', loanAccounts.value)
       } else {
-        console.warn('⚠️credit registry PerformingAccounts not found')
+        console.warn('⚠️ No PerformingAccounts found')
       }
-      // Delinquents Accounts Mapping
+
+      // Delinquent Accounts
       if (Array.isArray(creditRegistryHistory.DelinquentAccounts)) {
-        delinquentAccounts.value = creditRegistryHistory.DelinquentAccounts.map((account) => ({
-          lender: account.CreditorName,
-          date: moment(account.Date_Opened).format('DD/MM/YYYY'),
-          amount: account.CredidelinquentAccountst_Limit || 0,
-          balance: account.Balance || 0,
-          status: account.Account_Status || 'Delinquent',
-          raw: account,
-
-          // Additional fields for dropdown
-          accountNo: account.Account_No,
-          closedDate: account.Balance_Date,
-          duration: account.Term,
-          repaymentFrequency: account.RepaymentFrequency,
-          overdue: account.AmountOverdue,
-          instalment: account.Minimum_Installment,
-          performanceStatus: account.Account_Status,
-          currency: account.Currency
-        }))
-
-        console.log('✅credit registry Delinquents Accounts:', delinquentAccounts.value)
+        delinquentAccounts.value = creditRegistryHistory.DelinquentAccounts.map(
+          (account, index) => ({
+            uid: `${account.Account_No || 'acc'}-${index}`,
+            lender: account.CreditorName,
+            date: moment(account.Date_Opened).format('DD/MM/YYYY'),
+            amount: account.Credit_Limit || 0,
+            balance: account.Balance || 0,
+            status: account.Account_Status || 'Delinquent',
+            raw: account
+          })
+        )
+        console.log('✅ Credit Registry Delinquent Accounts:', delinquentAccounts.value)
       } else {
-        console.warn('⚠️credit registry Delinquents accounts not found')
+        console.warn('⚠️ No DelinquentAccounts found')
       }
 
-      // Closed Accounts Mapping
-      if (Array.isArray(creditRegistryHistory.closedAccounts)) {
-        closedAccounts.value = creditRegistryHistory.ClosedAccounts.map((account) => ({
+      // Closed Accounts
+      if (Array.isArray(creditRegistryHistory.ClosedAccounts)) {
+        closedAccounts.value = creditRegistryHistory.ClosedAccounts.map((account, index) => ({
+          uid: `${account.Account_No || 'acc'}-${index}`,
           lender: account.CreditorName,
           date: moment(account.Date_Opened).format('DD/MM/YYYY'),
           amount: account.Credit_Limit || 0,
           balance: account.Balance || 0,
-          status: account.Account_Status || 'closed',
-          raw: account,
-
-          // Additional fields for dropdown
-          accountNo: account.Account_No,
-          closedDate: account.Balance_Date,
-          duration: account.Term,
-          repaymentFrequency: account.RepaymentFrequency,
-          overdue: account.AmountOverdue,
-          instalment: account.Minimum_Installment,
-          performanceStatus: account.Account_Status,
-          currency: account.Currency
+          status: account.Account_Status || 'Closed',
+          raw: account
         }))
-
-        console.log('✅credit registry Closed Accounts:', closedAccounts.value)
+        console.log('✅ Credit Registry Closed Accounts:', closedAccounts.value)
       } else {
-        console.warn('⚠️credit registry Closed accounts not found')
+        console.warn('⚠️ No ClosedAccounts found')
       }
 
-      // derogatory accounts
+      // Derogatory Accounts
       if (Array.isArray(creditRegistryHistory.DerogatoryAccounts)) {
-        derogatoryAccounts.value = creditRegistryHistory.DerogatoryAccounts.map((account) => ({
+        derogatoryAccounts.value = creditRegistryHistory.DerogatoryAccounts.map(
+          (account, index) => ({
+            uid: `${account.Account_No || 'acc'}-${index}`,
+            lender: account.CreditorName,
+            date: moment(account.Date_Opened).format('DD/MM/YYYY'),
+            amount: account.Credit_Limit || 0,
+            balance: account.Balance || 0,
+            status: account.Account_Status || 'Derogatory',
+            raw: account
+          })
+        )
+        console.log('✅ Credit Registry Derogatory Accounts:', derogatoryAccounts.value)
+      } else {
+        console.warn('⚠️ No DerogatoryAccounts found')
+      }
+
+      // Written Off Accounts
+      if (Array.isArray(creditRegistryHistory.WrittenOffAccounts)) {
+        writtenOffAccounts.value = creditRegistryHistory.WrittenOffAccounts.map(
+          (account, index) => ({
+            uid: `${account.Account_No || 'acc'}-${index}`,
+            lender: account.CreditorName,
+            date: moment(account.Date_Opened).format('DD/MM/YYYY'),
+            amount: account.Credit_Limit || 0,
+            balance: account.Balance || 0,
+            status: account.Account_Status || 'Written Off',
+            raw: account
+          })
+        )
+        console.log('✅ Credit Registry Written Off Accounts:', writtenOffAccounts.value)
+      } else {
+        console.warn('⚠️ No WrittenOffAccounts found')
+      }
+
+      // Unknown Status Accounts
+      if (Array.isArray(creditRegistryHistory.unknownAccounts)) {
+        unknownAccounts.value = creditRegistryHistory.unknownAccounts.map((account, index) => ({
+          uid: `${account.Account_No || 'acc'}-${index}`,
           lender: account.CreditorName,
           date: moment(account.Date_Opened).format('DD/MM/YYYY'),
           amount: account.Credit_Limit || 0,
           balance: account.Balance || 0,
-          status: account.Account_Status || 'Derogatory',
-          raw: account,
-
-          // Additional fields for dropdown
-          accountNo: account.Account_No,
-          closedDate: account.Balance_Date,
-          duration: account.Term,
-          repaymentFrequency: account.RepaymentFrequency,
-          overdue: account.AmountOverdue,
-          instalment: account.Minimum_Installment,
-          performanceStatus: account.Account_Status,
-          currency: account.Currency
+          status: account.Account_Status || 'Unknown',
+          raw: account
         }))
-
-        console.log('✅credit registry Derogatory Accounts:', derogatoryAccounts.value)
+        console.log('✅ Credit Registry Unknown Status Accounts:', unknownAccounts.value)
       } else {
-        console.warn('⚠️credit registry DerogatoryAccounts not found')
+        console.warn('⚠️ No unknownAccounts found')
       }
 
-      // Written off accounts
-      if (creditRegistryHistory && Array.isArray(creditRegistryHistory.WrittenOffAccounts)) {
-        writtenOffAccounts.value = creditRegistryHistory.WrittenOffAccounts.map((account) => ({
-          lender: account.CreditorName || 'N/A',
-          date: moment(account.Date_Opened).format('DD/MM/YYYY'),
-          amount: account.Credit_Limit || 0,
-          balance: account.Balance || 0,
-          raw: account, // optional for future use
-
-          // Additional fields for dropdown
-          accountNo: account.Account_No,
-          closedDate: account.Balance_Date,
-          duration: account.Term,
-          repaymentFrequency: account.RepaymentFrequency,
-          overdue: account.AmountOverdue,
-          instalment: account.Minimum_Installment,
-          performanceStatus: account.Account_Status,
-          currency: account.Currency
-        }))
-
-        console.log('✅credit registry writtenOffAccounts:', writtenOffAccounts.value)
-      } else {
-        console.warn('⚠️credit registry WrittenOffAccounts not found or invalid')
-      }
-
-      // Unknown Accounts
-      if (creditRegistryHistory && Array.isArray(creditRegistryHistory.UnknownStatusAccounts)) {
-        unknownAccounts.value = creditRegistryHistory.UnknownStatusAccounts.map((account) => ({
-          lender: account.CreditorName || 'N/A',
-          date: moment(account.Date_Opened).format('DD/MM/YYYY'),
-          amount: account.Credit_Limit || 0,
-          balance: account.Balance || 0,
-          raw: account, // optional for future use
-
-          // Additional fields for dropdown
-          accountNo: account.Account_No,
-          closedDate: account.Balance_Date,
-          duration: account.Term,
-          repaymentFrequency: account.RepaymentFrequency,
-          overdue: account.AmountOverdue,
-          instalment: account.Minimum_Installment,
-          performanceStatus: account.Account_Status,
-          currency: account.Currency
-        }))
-
-        console.log('✅credit registry unknownaccounts:', unknownAccounts.value)
-      } else {
-        console.warn('⚠️credit registry UnknownStatusAccounts not found or invalid')
-      }
       // Inquiry History
-      if (creditRegistryHistory.InquiryHistory?.length) {
-        inquiryHistory.value = creditRegistryHistory.InquiryHistory.map((entry) => ({
+      if (Array.isArray(creditRegistryHistory.InquiryHistory)) {
+        inquiryHistory.value = creditRegistryHistory.InquiryHistory.map((entry, index) => ({
+          uid: `inq-${index}`,
           subscriber: entry.Subscriber || 'Unknown',
           date: moment(entry.InquiryDate).format('DD/MM/YYYY'),
           phone: entry.ContactPhone || 'N/A',
           reason: entry.Reason || 'N/A',
           raw: entry
         }))
-        console.log('✅credit registry Inquiry History:', inquiryHistory.value)
+        console.log('✅ Credit Registry Inquiry History:', inquiryHistory.value)
+      } else {
+        console.warn('⚠️ No InquiryHistory found')
       }
     }
   } catch (error) {
@@ -1073,7 +1012,65 @@ onMounted(() => {
             <!-- Personal Details Summary -->
             <div v-if="idType !== 'business'" class="bg-white p-6 rounded space-y-4">
               <h2 class="text-md font-semibold mb-4">Personal details summary</h2>
-              <div class="text-gray-500 text-sm italic">No personal data available.</div>
+              <!-- Check if `personal` has any data -->
+              <div
+                v-if="
+                  creditPersonal &&
+                  Object.values(creditPersonal).some((val) => val && val.toString().trim() !== '')
+                "
+                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-6 gap-x-8 text-sm text-gray-600"
+              >
+                <div>
+                  <p class="mb-1">Last Name</p>
+                  <p class="font-bold text-gray-900">{{ creditPersonal.Surname || 'N/A' }}</p>
+                </div>
+                <div>
+                  <p class="mb-1">Gender</p>
+                  <p class="font-bold text-gray-900">{{ creditPersonal.Gender || 'N/A' }}</p>
+                </div>
+                <div>
+                  <p class="mb-1">Phone Number</p>
+                  <p class="font-bold text-gray-900">{{ creditPersonal.CellularNo || 'N/A' }}</p>
+                </div>
+                <div>
+                  <p class="mb-1">Latest Residential Address</p>
+                  <p class="font-bold text-gray-900 leading-snug">
+                    {{ creditPersonal.ResidentialAddress1 || 'N/A' }}
+                  </p>
+                </div>
+                <div>
+                  <p class="mb-1">First Name</p>
+                  <p class="font-bold text-gray-900">{{ creditPersonal.FirstName || 'N/A' }}</p>
+                </div>
+                <div>
+                  <p class="mb-1">Bank Verification Number</p>
+                  <p class="font-bold text-gray-900">
+                    {{ creditPersonal.BankVerificationNo || 'N/A' }}
+                  </p>
+                </div>
+                <div>
+                  <p class="mb-1">Work Telephone</p>
+                  <p class="font-bold text-gray-900">
+                    {{ creditPersonal.WorkTelephoneNo || 'N/A' }}
+                  </p>
+                </div>
+                <div>
+                  <p class="mb-1">Other Names</p>
+                  <p class="font-bold text-gray-900">{{ creditPersonal.OtherNames || 'N/A' }}</p>
+                </div>
+                <div>
+                  <p class="mb-1">Date of Birth</p>
+                  <p class="font-bold text-gray-900">{{ creditPersonal.BirthDate || 'N/A' }}</p>
+                </div>
+                <div>
+                  <p class="mb-1">Home Telephone</p>
+                  <p class="font-bold text-gray-900">
+                    {{ creditPersonal.HomeTelephoneNo || 'N/A' }}
+                  </p>
+                </div>
+              </div>
+
+              <div v-else class="text-gray-500 text-sm italic">No personal data available.</div>
             </div>
 
             <div v-else>
@@ -1081,9 +1078,7 @@ onMounted(() => {
               <div v-if="idType === 'business'" class="bg-white p-6 rounded space-y-4">
                 <h2 class="text-md font-semibold">Business Information</h2>
 
-                <div class="text-sm text-gray-500 italic">
-                  No business information available.
-                </div>
+                <div class="text-sm text-gray-500 italic">No business information available.</div>
               </div>
 
               <!-- DIRECTOR INFORMATION TABLE -->

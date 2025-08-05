@@ -699,7 +699,7 @@ const exportPDF = () => {
     message: 'Downloading report...',
     type: 'warning',
     duration: 0, // stays until closed
-    showClose: false
+    showClose: true
   })
 
   setTimeout(() => {
