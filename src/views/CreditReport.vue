@@ -100,6 +100,10 @@ const mergeFcbcArray = (arr) => {
   return result
 }
 
+function displayValue(value) {
+  return value && value.trim() !== '' ? value : 'N/A'
+}
+
 // FCBC section counts (for use in template)
 
 const fcbcHighestDelinquencyRatingCount = ref(0)
@@ -174,10 +178,6 @@ const fetchCreditReport = async (creditReportId) => {
         console.log('✅FCBC BusinessData:', businessData.value)
         console.log('✅FCBC Directors:', directors.value)
 
-        const rawSummary = fcbcCreditHistory?.CreditAccountSummary
-        summary.value = Array.isArray(rawSummary) && rawSummary.length > 0 ? rawSummary[0] : {}
-        console.log('✅FCBC Summary:', summary.value)
-
         const rawCreditAgreementSummary = fcbcCreditHistory?.CreditAgreementSummary ?? []
         creditAgreementSummary.value = rawCreditAgreementSummary.map((item, index) => ({
           uid: `${item.AccountNo || 'acc'}-${index}`,
@@ -195,7 +195,32 @@ const fetchCreditReport = async (creditReportId) => {
           performanceStatus: item.PerformanceStatus,
           currency: item.Currency
         }))
+
         console.log('✅FCBC Credit Agreement Summary:', creditAgreementSummary.value)
+
+        // summary
+        const rawSummary = fcbcCreditHistory?.CreditAccountSummary
+        summary.value = Array.isArray(rawSummary) && rawSummary.length > 0 ? rawSummary[0] : {}
+
+        const totalOpen = creditAgreementSummary.value.filter(
+          (item) => item.status?.toLowerCase() === 'open'
+        ).length
+
+        const totalClosed = creditAgreementSummary.value.filter(
+          (item) => item.status?.toLowerCase() === 'closed'
+        ).length
+
+        const totalWrittenOff = creditAgreementSummary.value.filter(
+          (item) => item.performanceStatus?.toLowerCase() === 'written-off'
+        ).length
+
+        // Merge into summary
+        summary.value.TotalOpenFacilities = totalOpen
+        summary.value.TotalClosedFacilities = totalClosed
+        summary.value.TotalWrittenOffFacilities = totalWrittenOff
+
+        console.log('✅FCBC Summary (Business):', summary.value)
+        console.log('Open:', totalOpen, 'Closed:', totalClosed, 'Written-off:', totalWrittenOff)
 
         const rawEnquiryHistoryTop = fcbcCreditHistory?.EnquiryHistoryTop ?? []
         enquiryHistory.value = rawEnquiryHistoryTop
@@ -208,11 +233,18 @@ const fetchCreditReport = async (creditReportId) => {
         console.log('✅ FCBC Enquiry History (cleaned):', enquiryHistory.value)
 
         const rawEmploymentHistory = fcbcCreditHistory?.EmploymentHistory ?? []
-        employmentHistory.value = rawEmploymentHistory.map((item) => ({
-          employerName: item.EmployerDetail,
-          date: moment(item.UpdateDate).format('DD/MM/YYYY'),
-          rawDate: moment(item.UpdateDate)
-        }))
+
+        employmentHistory.value = rawEmploymentHistory
+          .filter((item) => item.EmployerDetail && item.EmployerDetail.trim() !== '')
+          .map((item) => ({
+            employerName: item.EmployerDetail,
+            date:
+              item.UpdateDate && item.UpdateDate.trim() !== ''
+                ? moment(item.UpdateDate).format('DD/MM/YYYY')
+                : 'N/A',
+            rawDate:
+              item.UpdateDate && item.UpdateDate.trim() !== '' ? moment(item.UpdateDate) : null
+          }))
         console.log('✅FCBC Employment History:', employmentHistory.value)
 
         const rawAddressHistory = fcbcCreditHistory?.AddressHistory ?? []
@@ -230,30 +262,7 @@ const fetchCreditReport = async (creditReportId) => {
         }))
         console.log('✅FCBC Address History:', addressHistory.value)
       } else if (idType.value === 'individual') {
-        fcbcHighestDelinquencyRatingCount.value = Array.isArray(
-          fcbcCreditHistory.HighestDelinquencyRating
-        )
-          ? fcbcCreditHistory.HighestDelinquencyRating.length
-          : 0
-
-        fcbcCreditAgreementSummaryCount.value = Array.isArray(
-          fcbcCreditHistory.CreditAgreementSummary
-        )
-          ? fcbcCreditHistory.CreditAgreementSummary.length
-          : 0
-
-        const rawSummary = fcbcCreditHistory?.CreditAccountSummary
-        summary.value = Array.isArray(rawSummary) && rawSummary.length > 0 ? rawSummary[0] : {}
-        console.log('✅FCBC Summary (Individual):', summary.value)
-
-        const rawPersonalDetails = fcbcCreditHistory?.PersonalDetailsSummary ?? []
-        personal.value =
-          Array.isArray(rawPersonalDetails) && rawPersonalDetails.length > 0
-            ? rawPersonalDetails[0]
-            : {}
-
-        console.log('✅ FCBC Personal Details (Individual):', personal.value)
-
+        //  credit agreement summary which is loan accounts
         const rawCreditAgreementSummary = fcbcCreditHistory?.CreditAgreementSummary ?? []
         creditAgreementSummary.value = rawCreditAgreementSummary.map((item, index) => ({
           uid: `${item.AccountNo || 'acc'}-${index}`,
@@ -271,7 +280,41 @@ const fetchCreditReport = async (creditReportId) => {
           performanceStatus: item.PerformanceStatus,
           currency: item.Currency
         }))
+
         console.log('✅FCBC Credit Agreement Summary (Individual):', creditAgreementSummary.value)
+
+        // summary
+        const rawSummary = fcbcCreditHistory?.CreditAccountSummary
+        summary.value = Array.isArray(rawSummary) && rawSummary.length > 0 ? rawSummary[0] : {}
+
+        const totalOpen = creditAgreementSummary.value.filter(
+          (item) => item.status?.toLowerCase() === 'open'
+        ).length
+
+        const totalClosed = creditAgreementSummary.value.filter(
+          (item) => item.status?.toLowerCase() === 'closed'
+        ).length
+
+        const totalWrittenOff = creditAgreementSummary.value.filter(
+          (item) => item.performanceStatus?.toLowerCase() === 'written-off'
+        ).length
+
+        // Merge into summary
+        summary.value.TotalOpenFacilities = totalOpen
+        summary.value.TotalClosedFacilities = totalClosed
+        summary.value.TotalWrittenOffFacilities = totalWrittenOff
+
+        console.log('✅FCBC Summary (Individual):', summary.value)
+        console.log('Open:', totalOpen, 'Closed:', totalClosed, 'Written-off:', totalWrittenOff)
+
+        // personal
+        const rawPersonalDetails = fcbcCreditHistory?.PersonalDetailsSummary ?? []
+        personal.value =
+          Array.isArray(rawPersonalDetails) && rawPersonalDetails.length > 0
+            ? rawPersonalDetails[0]
+            : {}
+
+        console.log('✅ FCBC Personal Details (Individual):', personal.value)
 
         const rawEnquiryHistoryTop = fcbcCreditHistory?.EnquiryHistoryTop ?? []
         enquiryHistory.value = rawEnquiryHistoryTop
@@ -284,11 +327,19 @@ const fetchCreditReport = async (creditReportId) => {
         console.log('✅ FCBC Enquiry History (Individual):', enquiryHistory.value)
 
         const rawEmploymentHistory = fcbcCreditHistory?.EmploymentHistory ?? []
-        employmentHistory.value = rawEmploymentHistory.map((item) => ({
-          employerName: item.EmployerDetail,
-          date: moment(item.UpdateDate).format('DD/MM/YYYY'),
-          rawDate: moment(item.UpdateDate)
-        }))
+
+        employmentHistory.value = rawEmploymentHistory
+          .filter((item) => item.EmployerDetail && item.EmployerDetail.trim() !== '')
+          .map((item) => ({
+            employerName: item.EmployerDetail,
+            date:
+              item.UpdateDate && item.UpdateDate.trim() !== ''
+                ? moment(item.UpdateDate).format('DD/MM/YYYY')
+                : 'N/A',
+            rawDate:
+              item.UpdateDate && item.UpdateDate.trim() !== '' ? moment(item.UpdateDate) : null
+          }))
+
         console.log('✅FCBC Employment History (Individual):', employmentHistory.value)
 
         const rawAddressHistory = fcbcCreditHistory?.AddressHistory ?? []
@@ -779,17 +830,22 @@ onMounted(() => {
                 >
                   <div>
                     <p class="mb-1">Business Name</p>
-                    <p class="font-bold text-gray-900">{{ businessData.BusinessName }}</p>
+                    <p class="font-bold text-gray-900">
+                      {{ displayValue(businessData.BusinessName) }}
+                    </p>
                   </div>
                   <div>
                     <p class="mb-1">Date of Incorporation</p>
-                    <p class="font-bold text-gray-900">{{ businessData.DateOfIncorporation }}</p>
+                    <p class="font-bold text-gray-900">
+                      {{ displayValue(businessData.DateOfIncorporation) }}
+                    </p>
                   </div>
                   <div>
                     <p class="mb-1">Business Address</p>
                     <p class="font-bold text-gray-900">
-                      {{ businessData.CommercialAddress1 }}, {{ businessData.CommercialAddress2 }},
-                      {{ businessData.CommercialAddress4 }}
+                      {{ displayValue(businessData.CommercialAddress1) }},
+                      {{ displayValue(businessData.CommercialAddress2) }},
+                      {{ displayValue(businessData.CommercialAddress4) }}
                     </p>
                   </div>
                 </div>
@@ -803,24 +859,31 @@ onMounted(() => {
                   <table class="min-w-full text-sm text-left">
                     <thead class="text-xs font-semibold text-gray-700">
                       <tr>
-                        <th class="p-2">First Name</th>
-                        <th class="p-2">Other Names</th>
-                        <th class="p-2">Surname</th>
-                        <th class="p-2">Identification Number</th>
+                        <th class="">First Name</th>
+                        <th class="">Other Names</th>
+                        <th class="">Surname</th>
+                        <th class="">Identification Number</th>
                       </tr>
                     </thead>
                     <tbody>
-                      <tr v-for="(director, index) in directors" :key="index" class="">
-                        <td class="p-2 font-bold text-gray-900">{{ director.firstName }}</td>
-                        <td class="p-2 font-bold text-gray-900">{{ director.othernames }}</td>
-                        <td class="p-2 font-bold text-gray-900">{{ director.surname }}</td>
-                        <td class="p-2 font-bold text-gray-900">
-                          {{ director.Identificationnumber }}
+                      <tr v-for="(director, index) in directors" :key="index">
+                        <td class="pt-4 font-bold text-gray-900">
+                          {{ displayValue(director.firstName) }}
+                        </td>
+                        <td class="font-bold text-gray-900">
+                          {{ displayValue(director.othernames) }}
+                        </td>
+                        <td class="font-bold text-gray-900">
+                          {{ displayValue(director.surname) }}
+                        </td>
+                        <td class="font-bold text-gray-900">
+                          {{ displayValue(director.Identificationnumber) }}
                         </td>
                       </tr>
                     </tbody>
                   </table>
                 </div>
+
                 <div v-else class="text-sm text-gray-500 italic">
                   No director information available.
                 </div>
@@ -842,11 +905,11 @@ onMounted(() => {
                 </div>
                 <div>
                   <p class="mb-1">Total no of credit facilities</p>
-                  <p class="font-bold text-gray-900">{{ fcbcCreditAgreementSummaryCount }}</p>
+                  <p class="font-bold text-gray-900">{{ summary.TotalAccounts }}</p>
                 </div>
                 <div>
                   <p class="mb-1">Total no of open facilities</p>
-                  <p class="font-bold text-gray-900">{{ summary.TotalOpenFacilities }}</p>
+                  <p class="font-bold text-gray-900">{{ displayValue(summary.totalOpen) }}</p>
                 </div>
 
                 <!-- Row 2 -->
@@ -860,7 +923,7 @@ onMounted(() => {
                 </div>
                 <div>
                   <p class="mb-1">Total no of closed credit facilities</p>
-                  <p class="font-bold text-gray-900"></p>
+                  <p class="font-bold text-gray-900">{{ displayValue(summary.totalClosed) }}</p>
                 </div>
 
                 <!-- Row 3 -->
@@ -874,7 +937,7 @@ onMounted(() => {
                 </div>
                 <div>
                   <p class="mb-1">Total no written off facilities</p>
-                  <p class="font-bold text-gray-900">{{ summary.TotalWrittenOffFacilities }}</p>
+                  <p class="font-bold text-gray-900">{{ displayValue(summary.totalWrittenOff) }}</p>
                 </div>
               </div>
 
