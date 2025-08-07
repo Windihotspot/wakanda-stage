@@ -133,7 +133,7 @@
           </div>
           <div>
             <p class="mb-1">Total no of credit facilities</p>
-            <p class="font-bold text-gray-900">{{ fcbcCreditAgreementSummaryCount }}</p>
+            <p class="font-bold text-gray-900">{{  }}</p>
           </div>
           <div>
             <p class="mb-1">Total no of open facilities</p>
@@ -161,7 +161,7 @@
           </div>
           <div>
             <p class="mb-1">Total no of delinquent facilities</p>
-            <p class="font-bold text-gray-900">{{ fcbcHighestDelinquencyRatingCount }}</p>
+            <p class="font-bold text-gray-900">{{  }}</p>
           </div>
           <div>
             <p class="mb-1">Total no written off facilities</p>
@@ -337,7 +337,7 @@
           </div>
           <div>
             <p class="mb-1">Total no of credit facilities</p>
-            <p class="font-bold text-gray-900">{{ fcbcCreditAgreementSummaryCount }}</p>
+            <p class="font-bold text-gray-900">{{  }}</p>
           </div>
           <div>
             <p class="mb-1">Total no of open facilities</p>
@@ -365,7 +365,7 @@
           </div>
           <div>
             <p class="mb-1">Total no of delinquent facilities</p>
-            <p class="font-bold text-gray-900">{{ fcbcHighestDelinquencyRatingCount }}</p>
+            <p class="font-bold text-gray-900">{{  }}</p>
           </div>
           <div>
             <p class="mb-1">Total no written off facilities</p>
@@ -622,8 +622,6 @@ import { ElNotification, ElMessage } from 'element-plus'
 import html2pdf from 'html2pdf.js'
 
 const props = defineProps({
-  fcbcCreditAgreementSummaryCount: Number,
-  fcbcHighestDelinquencyRatingCount: Number,
   idType: String,
   businessData: Object,
   directors: Array,
@@ -633,14 +631,19 @@ const props = defineProps({
   enquiryHistory: Array,
   employmentHistory: Array,
   addressHistory: Array,
-
   loanAccounts: Array,
   delinquentAccounts: Array,
   closedAccounts: Array,
   derogatoryAccounts: Array,
   writtenOffAccounts: Array,
   unknownAccounts: Array,
-  inquiryHistory: Array
+  inquiryHistory: Array,
+  creditPersonal: Object,
+  creditRegistryBusinessName: String,
+  creditDirectors: Array,
+  creditRegistryTotalOpen: Number,
+  creditRegistryTotalClosed: Number,
+  creditRegistryTotalWrittenOff: Number
 })
 const expanded = ref([])
 
@@ -663,7 +666,6 @@ const employmentHeaders = [
   { title: 'Employer Name', key: 'employerName' },
   { title: 'Date Updated', key: 'date' }
 ]
-
 
 function getStatusColor(status) {
   if (!status || status.trim() === '') return 'grey'

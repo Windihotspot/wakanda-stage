@@ -48,6 +48,12 @@ const creditPersonal = ref({
   CellularNo: '',
   ResidentialAddress1: ''
 })
+const creditRegistrybusinessName = ref('')
+const creditDirectors = ref([])
+
+const creditRegistryTotalOpen = ref(0)
+const creditRegistryTotalClosed = ref(0)
+const creditRegistryTotalWrittenOff = ref(0)
 
 function formatNaira(value) {
   if (!value) return '₦0.00'
@@ -104,12 +110,6 @@ function displayValue(value) {
   return value && value.trim() !== '' ? value : 'N/A'
 }
 
-// FCBC section counts (for use in template)
-
-const fcbcHighestDelinquencyRatingCount = ref(0)
-
-const fcbcCreditAgreementSummaryCount = ref(0)
-
 const fetchCreditReport = async (creditReportId) => {
   const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
 
@@ -135,19 +135,17 @@ const fetchCreditReport = async (creditReportId) => {
     })
 
     const report = response.data.data
-    console.log('🟢 Full Report:', report)
-    let fcbcCreditHistory = null
-
     const creditHistory = report?.credit_history
     idType.value = creditHistory?.id_type
     console.log('📌 idType', idType.value)
+    console.log('🟢 Full Report:', report)
 
     // ---------------------- FCBC Handling ----------------------
     const rawFcbc = creditHistory?.fcbc_credit_history
     if (rawFcbc) {
-      console.log('✅ FCBC raw(array)Data:', rawFcbc)
+      console.log('✅ FCBC (array)Data:', rawFcbc)
       console.log('🔍 typeof rawFcbc:', typeof rawFcbc)
-      console.log('🔍 rawFcbc isArray:', Array.isArray(rawFcbc))
+      console.log('🔍 Fcbc isArray:', Array.isArray(rawFcbc))
 
       const normalizedFcbc = normalizeFcbcInput(rawFcbc)
       console.log('🔍 Normalized FCBC:', normalizedFcbc)
@@ -157,17 +155,7 @@ const fetchCreditReport = async (creditReportId) => {
       console.log('✅ Merged FCBC Object:', fcbcCreditHistory)
 
       if (idType.value === 'business') {
-        fcbcHighestDelinquencyRatingCount.value = Array.isArray(
-          fcbcCreditHistory.HighestDelinquencyRating
-        )
-          ? fcbcCreditHistory.HighestDelinquencyRating.length
-          : 0
-
-        fcbcCreditAgreementSummaryCount.value = Array.isArray(
-          fcbcCreditHistory.CreditAgreementSummary
-        )
-          ? fcbcCreditHistory.CreditAgreementSummary.length
-          : 0
+        // business and directors
 
         const businessDataArray = fcbcCreditHistory?.BusinessData || []
         const directorInfoArray = fcbcCreditHistory?.DirectorInformation || []
@@ -179,27 +167,34 @@ const fetchCreditReport = async (creditReportId) => {
         console.log('✅FCBC Directors:', directors.value)
 
         const rawCreditAgreementSummary = fcbcCreditHistory?.CreditAgreementSummary ?? []
+
+        function safeValue(val) {
+          return val === undefined || val === null || val === '' ? 'N/A' : val
+        }
+
         creditAgreementSummary.value = rawCreditAgreementSummary.map((item, index) => ({
           uid: `${item.AccountNo || 'acc'}-${index}`,
-          lender: item.SubscriberName,
-          date: moment(item.DateAccountOpened).format('DD/MM/YYYY'),
-          amount: formatNaira(item.OpeningBalanceAmt ?? '0'),
-          balance: formatNaira(item.CurrentBalanceAmt ?? '0'),
-          status: item.AccountStatus,
-          accountNo: item.AccountNo,
-          closedDate: moment(item.ClosedDate).format('DD/MM/YYYY'),
-          duration: item.LoanDuration,
-          repaymentFrequency: item.RepaymentFrequency,
-          overdue: formatNaira(item.AmountOverdue),
-          instalment: formatNaira(item.InstalmentAmount),
-          performanceStatus: item.PerformanceStatus,
-          currency: item.Currency
+          lender: safeValue(item.SubscriberName),
+          date: item.DateAccountOpened
+            ? moment(item.DateAccountOpened).format('DD/MM/YYYY')
+            : 'N/A',
+          amount: formatNaira(item.OpeningBalanceAmt ?? 0),
+          balance: formatNaira(item.CurrentBalanceAmt ?? 0),
+          status: safeValue(item.AccountStatus),
+          accountNo: safeValue(item.AccountNo),
+          closedDate: item.ClosedDate ? moment(item.ClosedDate).format('DD/MM/YYYY') : 'N/A',
+          duration: safeValue(item.LoanDuration),
+          repaymentFrequency: safeValue(item.RepaymentFrequency),
+          overdue: formatNaira(item.AmountOverdue ?? 0),
+          instalment: formatNaira(item.InstalmentAmount ?? 0),
+          performanceStatus: safeValue(item.PerformanceStatus),
+          currency: safeValue(item.Currency)
         }))
 
         console.log('✅FCBC Credit Agreement Summary:', creditAgreementSummary.value)
 
         // summary
-        const rawSummary = fcbcCreditHistory?.CreditAccountSummary
+        const rawSummary = fcbcCreditHistory?.FacilityPerformanceSummary
         summary.value = Array.isArray(rawSummary) && rawSummary.length > 0 ? rawSummary[0] : {}
 
         const totalOpen = creditAgreementSummary.value.filter(
@@ -363,21 +358,51 @@ const fetchCreditReport = async (creditReportId) => {
 
     // ---------------------- Credit Registry Handling ----------------------
     const creditRegistryHistory = creditHistory?.credit_registry_history?.AccountData
+    const creditRegistryPersonal = creditHistory?.credit_registry_history?.PersonalDetail
     console.log('🟠 Credit Registry AccountData:', creditRegistryHistory)
+    console.log('🟠 Credit Registry PersonalDetail:', creditRegistryPersonal)
+
     if (!creditRegistryHistory) {
       console.warn('⚠️ No Credit Registry data found')
       return
     }
 
     if (idType.value === 'business') {
-      // business
-
       // Directors
+      const creditPersonalDirectors = creditRegistryPersonal
 
-      // Summary
+      if (
+        creditPersonalDirectors &&
+        creditPersonalDirectors.Name &&
+        creditPersonalDirectors.IDs?.length
+      ) {
+        const fullNameParts = creditPersonalDirectors.Name.trim().split(' ')
+        const surname = fullNameParts[fullNameParts.length - 1]
+        const firstName = fullNameParts[0]
+        const otherNames = fullNameParts.slice(1, fullNameParts.length - 1).join(' ')
+
+        creditDirectors.value = [
+          {
+            firstName,
+            otherNames,
+            surname,
+            identificationNumber: creditPersonalDirectors.IDs.join(' | ')
+          }
+        ]
+        console.log('credit registry directors:', creditDirectors.value)
+      } else {
+        creditDirectors.value = []
+      }
 
       // Performing Accounts
+      const performingAccounts = creditRegistryHistory?.PerformingAccounts
       if (Array.isArray(creditRegistryHistory.PerformingAccounts)) {
+        // Extract business name from first account's Account_Owners
+        const firstOwners = performingAccounts[0]?.Account_Owners
+        const businessName =
+          Array.isArray(firstOwners) && firstOwners.length > 0 ? firstOwners[0].FullName : null
+
+        creditRegistrybusinessName.value = firstOwners
         loanAccounts.value = creditRegistryHistory.PerformingAccounts.map((account, index) => ({
           uid: `${account.Account_No || 'acc'}-${index}`,
           lender: account.CreditorName,
@@ -389,7 +414,7 @@ const fetchCreditReport = async (creditReportId) => {
           accountNo: account.Account_No,
           closedDate: moment(account.Balance_Date).format('DD/MM/YYYY'),
           duration: account.Term,
-          repaymentFrequency: account.RepaymentFrequency,
+          repaymentFrequency: account.Term_Frequency,
           overdue: account.AmountOverdue,
           instalment: account.Minimum_Installment,
           performanceStatus: account.Account_Status,
@@ -399,6 +424,33 @@ const fetchCreditReport = async (creditReportId) => {
       } else {
         console.warn('⚠️ No PerformingAccounts found')
       }
+
+      // Summary
+
+      if (Array.isArray(performingAccounts)) {
+        creditRegistryTotalOpen.value = performingAccounts.filter(
+          (item) => item.status?.toLowerCase() === 'open'
+        ).length
+
+        creditRegistryTotalClosed.value = performingAccounts.filter(
+          (item) => item.status?.toLowerCase() === 'closed'
+        ).length
+
+        creditRegistryTotalWrittenOff.value = performingAccounts.filter(
+          (item) => item.performanceStatus?.toLowerCase() === 'written-off'
+        ).length
+      } else {
+        console.warn('⚠️ No PerformingAccounts found in Credit Registry')
+      }
+
+      console.log(
+        'Open:',
+        creditRegistryTotalOpen,
+        'Closed:',
+        creditRegistryTotalClosed,
+        'Written-off:',
+        creditRegistryTotalWrittenOff
+      )
 
       // Delinquent Accounts
       if (Array.isArray(creditRegistryHistory.DelinquentAccounts)) {
@@ -410,7 +462,15 @@ const fetchCreditReport = async (creditReportId) => {
             amount: account.Credit_Limit || 0,
             balance: account.Balance || 0,
             status: account.Account_Status || 'Delinquent',
-            raw: account
+            raw: account,
+            accountNo: account.Account_No,
+            closedDate: moment(account.Balance_Date).format('DD/MM/YYYY'),
+            duration: account.Term,
+            repaymentFrequency: account.Term_Frequency,
+            overdue: account.AmountOverdue,
+            instalment: account.Minimum_Installment,
+            performanceStatus: account.Account_Status,
+            currency: account.Currency
           })
         )
         console.log('✅ Credit Registry Delinquent Accounts:', delinquentAccounts.value)
@@ -427,7 +487,15 @@ const fetchCreditReport = async (creditReportId) => {
           amount: account.Credit_Limit || 0,
           balance: account.Balance || 0,
           status: account.Account_Status || 'Closed',
-          raw: account
+          raw: account,
+          accountNo: account.Account_No,
+          closedDate: moment(account.Balance_Date).format('DD/MM/YYYY'),
+          duration: account.Term,
+          repaymentFrequency: account.Term_Frequency,
+          overdue: account.AmountOverdue,
+          instalment: account.Minimum_Installment,
+          performanceStatus: account.Account_Status,
+          currency: account.Currency
         }))
         console.log('✅ Credit Registry Closed Accounts:', closedAccounts.value)
       } else {
@@ -444,7 +512,15 @@ const fetchCreditReport = async (creditReportId) => {
             amount: account.Credit_Limit || 0,
             balance: account.Balance || 0,
             status: account.Account_Status || 'Derogatory',
-            raw: account
+            raw: account,
+            accountNo: account.Account_No,
+            closedDate: moment(account.Balance_Date).format('DD/MM/YYYY'),
+            duration: account.Term,
+            repaymentFrequency: account.Term_Frequency,
+            overdue: account.AmountOverdue,
+            instalment: account.Minimum_Installment,
+            performanceStatus: account.Account_Status,
+            currency: account.Currency
           })
         )
         console.log('✅ Credit Registry Derogatory Accounts:', derogatoryAccounts.value)
@@ -461,8 +537,16 @@ const fetchCreditReport = async (creditReportId) => {
             date: moment(account.Date_Opened).format('DD/MM/YYYY'),
             amount: account.Credit_Limit || 0,
             balance: account.Balance || 0,
-            status: account.Account_Status || 'Written Off',
-            raw: account
+            status: account.Account_Status || 'Written off',
+            raw: account,
+            accountNo: account.Account_No,
+            closedDate: moment(account.Balance_Date).format('DD/MM/YYYY'),
+            duration: account.Term,
+            repaymentFrequency: account.Term_Frequency,
+            overdue: account.AmountOverdue,
+            instalment: account.Minimum_Installment,
+            performanceStatus: account.Account_Status,
+            currency: account.Currency
           })
         )
         console.log('✅ Credit Registry Written Off Accounts:', writtenOffAccounts.value)
@@ -479,7 +563,15 @@ const fetchCreditReport = async (creditReportId) => {
           amount: account.Credit_Limit || 0,
           balance: account.Balance || 0,
           status: account.Account_Status || 'Unknown',
-          raw: account
+          raw: account,
+          accountNo: account.Account_No,
+          closedDate: moment(account.Balance_Date).format('DD/MM/YYYY'),
+          duration: account.Term,
+          repaymentFrequency: account.Term_Frequency,
+          overdue: account.AmountOverdue,
+          instalment: account.Minimum_Installment,
+          performanceStatus: account.Account_Status,
+          currency: account.Currency
         }))
         console.log('✅ Credit Registry Unknown Status Accounts:', unknownAccounts.value)
       } else {
@@ -517,13 +609,13 @@ const fetchCreditReport = async (creditReportId) => {
           WorkTelephoneNo: Array.isArray(crRaw.PhoneNumbers) ? crRaw.PhoneNumbers[1] || '' : '',
           HomeTelephoneNo: Array.isArray(crRaw.PhoneNumbers) ? crRaw.PhoneNumbers[1] || '' : '',
           CellularNo: Array.isArray(crRaw.PhoneNumbers) ? crRaw.PhoneNumbers[0] || '' : '',
-          ResidentialAddress1: crRaw.Address?.replace(/\r\n/g, ', ') || ''
+          ResidentialAddress1: crRaw?.Address
         }
+        console.log('credit registry personal:', creditPersonal.value)
       }
 
-      // summary
-
       // Performing Accounts
+      const performingAccounts = creditRegistryHistory?.PerformingAccounts
       if (Array.isArray(creditRegistryHistory.PerformingAccounts)) {
         loanAccounts.value = creditRegistryHistory.PerformingAccounts.map((account, index) => ({
           uid: `${account.Account_No || 'acc'}-${index}`,
@@ -547,6 +639,32 @@ const fetchCreditReport = async (creditReportId) => {
         console.warn('⚠️ No PerformingAccounts found')
       }
 
+      // summary
+      if (Array.isArray(performingAccounts)) {
+        creditRegistryTotalOpen.value = performingAccounts.filter(
+          (item) => item.status?.toLowerCase() === 'open'
+        ).length
+
+        creditRegistryTotalClosed.value = performingAccounts.filter(
+          (item) => item.status?.toLowerCase() === 'closed'
+        ).length
+
+        creditRegistryTotalWrittenOff.value = performingAccounts.filter(
+          (item) => item.performanceStatus?.toLowerCase() === 'written-off'
+        ).length
+      } else {
+        console.warn('⚠️ No PerformingAccounts found in Credit Registry')
+      }
+
+      console.log(
+        'Open:',
+        creditRegistryTotalOpen,
+        'Closed:',
+        creditRegistryTotalClosed,
+        'Written-off:',
+        creditRegistryTotalWrittenOff
+      )
+
       // Delinquent Accounts
       if (Array.isArray(creditRegistryHistory.DelinquentAccounts)) {
         delinquentAccounts.value = creditRegistryHistory.DelinquentAccounts.map(
@@ -557,7 +675,15 @@ const fetchCreditReport = async (creditReportId) => {
             amount: account.Credit_Limit || 0,
             balance: account.Balance || 0,
             status: account.Account_Status || 'Delinquent',
-            raw: account
+            raw: account,
+            accountNo: account.Account_No,
+            closedDate: moment(account.Balance_Date).format('DD/MM/YYYY'),
+            duration: account.Term,
+            repaymentFrequency: account.Term_Frequency,
+            overdue: account.AmountOverdue,
+            instalment: account.Minimum_Installment,
+            performanceStatus: account.Account_Status,
+            currency: account.Currency
           })
         )
         console.log('✅ Credit Registry Delinquent Accounts:', delinquentAccounts.value)
@@ -574,7 +700,15 @@ const fetchCreditReport = async (creditReportId) => {
           amount: account.Credit_Limit || 0,
           balance: account.Balance || 0,
           status: account.Account_Status || 'Closed',
-          raw: account
+          raw: account,
+          accountNo: account.Account_No,
+          closedDate: moment(account.Balance_Date).format('DD/MM/YYYY'),
+          duration: account.Term,
+          repaymentFrequency: account.Term_Frequency,
+          overdue: account.AmountOverdue,
+          instalment: account.Minimum_Installment,
+          performanceStatus: account.Account_Status,
+          currency: account.Currency
         }))
         console.log('✅ Credit Registry Closed Accounts:', closedAccounts.value)
       } else {
@@ -590,8 +724,16 @@ const fetchCreditReport = async (creditReportId) => {
             date: moment(account.Date_Opened).format('DD/MM/YYYY'),
             amount: account.Credit_Limit || 0,
             balance: account.Balance || 0,
-            status: account.Account_Status || 'Derogatory',
-            raw: account
+            status: account.Account_Status || 'Closed',
+            raw: account,
+            accountNo: account.Account_No,
+            closedDate: moment(account.Balance_Date).format('DD/MM/YYYY'),
+            duration: account.Term,
+            repaymentFrequency: account.Term_Frequency,
+            overdue: account.AmountOverdue,
+            instalment: account.Minimum_Installment,
+            performanceStatus: account.Account_Status,
+            currency: account.Currency
           })
         )
         console.log('✅ Credit Registry Derogatory Accounts:', derogatoryAccounts.value)
@@ -608,8 +750,16 @@ const fetchCreditReport = async (creditReportId) => {
             date: moment(account.Date_Opened).format('DD/MM/YYYY'),
             amount: account.Credit_Limit || 0,
             balance: account.Balance || 0,
-            status: account.Account_Status || 'Written Off',
-            raw: account
+            status: account.Account_Status || 'Written off',
+            raw: account,
+            accountNo: account.Account_No,
+            closedDate: moment(account.Balance_Date).format('DD/MM/YYYY'),
+            duration: account.Term,
+            repaymentFrequency: account.Term_Frequency,
+            overdue: account.AmountOverdue,
+            instalment: account.Minimum_Installment,
+            performanceStatus: account.Account_Status,
+            currency: account.Currency
           })
         )
         console.log('✅ Credit Registry Written Off Accounts:', writtenOffAccounts.value)
@@ -626,7 +776,15 @@ const fetchCreditReport = async (creditReportId) => {
           amount: account.Credit_Limit || 0,
           balance: account.Balance || 0,
           status: account.Account_Status || 'Unknown',
-          raw: account
+          raw: account,
+          accountNo: account.Account_No,
+          closedDate: moment(account.Balance_Date).format('DD/MM/YYYY'),
+          duration: account.Term,
+          repaymentFrequency: account.Term_Frequency,
+          overdue: account.AmountOverdue,
+          instalment: account.Minimum_Installment,
+          performanceStatus: account.Account_Status,
+          currency: account.Currency
         }))
         console.log('✅ Credit Registry Unknown Status Accounts:', unknownAccounts.value)
       } else {
@@ -649,7 +807,7 @@ const fetchCreditReport = async (creditReportId) => {
       }
     }
   } catch (error) {
-    console.error('❌ Error fetching credit report:', error)
+    console.log('❌ Error fetching credit report:', error)
   } finally {
     loading.value = false
   }
@@ -676,39 +834,37 @@ const employmentHeaders = [
   { title: 'Employer Name', key: 'employerName' },
   { title: 'Date Updated', key: 'date' }
 ]
+const delinquentHeaders = [
+  { title: "Lender's Name", key: 'lender' },
+  { title: 'Disbursement Date', key: 'date' },
+  { title: 'Loan Amount', key: 'amount' },
+  { title: 'Loan Balance', key: 'balance' },
+  { title: 'Action', key: 'action', sortable: false }
+]
+const closedHeaders = [
+  { title: "Lender's Name", key: 'lender' },
+  { title: 'Disbursement Date', key: 'date' },
+  { title: 'Loan Amount', key: 'amount' },
+  { title: 'Loan Balance', key: 'balance' },
+  { title: 'Action', key: 'action', sortable: false }
+]
 
-// const loans = ref([
-//   {
-//     lender: 'Links Microfinance Bank',
-//     disbursementDate: '16th Nov, 2024',
-//     loanAmount: 32500000,
-//     loanBalance: 0,
-//     status: 'Closed',
-//     accountNo: '032SPLG212310004',
-//     amountOverdue: 937500.1,
-//     instalmentAmount: 937500.1,
-//     loanDuration: 7,
-//     repaymentFrequency: 'Monthly',
-//     dateOpened: '07/12/2018',
-//     closedDate: '01/05/2019',
-//     performanceStatus: 'Performing'
-//   },
-//   {
-//     lender: 'ABC Bank',
-//     disbursementDate: '10th Jan, 2022',
-//     loanAmount: 12500000,
-//     loanBalance: 2500000,
-//     status: 'Open',
-//     accountNo: '012XPLG784512005',
-//     amountOverdue: 200000,
-//     instalmentAmount: 1000000,
-//     loanDuration: 12,
-//     repaymentFrequency: 'Quarterly',
-//     dateOpened: '01/01/2022',
-//     closedDate: 'N/A',
-//     performanceStatus: 'Non-Performing'
-//   }
-// ])
+const writtenOffHeaders = [
+  { title: "Lender's Name", key: 'lender' },
+  { title: 'Disbursement Date', key: 'date' },
+  { title: 'Loan Amount', key: 'amount' },
+  { title: 'Loan Balance', key: 'balance' },
+  { title: 'Action', key: 'action', sortable: false }
+]
+
+const unknownHeaders = [
+  { title: "Lender's Name", key: 'lender' },
+  { title: 'Disbursement Date', key: 'date' },
+  { title: 'Loan Amount', key: 'amount' },
+  { title: 'Loan Balance', key: 'balance' },
+  { title: 'Action', key: 'action', sortable: false }
+]
+
 const reportRef = ref(null)
 onMounted(() => {
   const unique_key = route.params.unique_key
@@ -719,6 +875,26 @@ onMounted(() => {
     loading.value = false
   }
 })
+
+function getChipStyle(status) {
+  if (!status) return 'bg-gray-200 text-gray-700'
+
+  const normalized = status.toLowerCase()
+  if (normalized === 'closed' || normalized === 'performing') {
+    return 'bg-green-100 text-green-800'
+  }
+  return 'bg-red-100 text-red-800'
+}
+
+function getDotColor(status) {
+  if (!status) return 'bg-gray-500'
+
+  const normalized = status.toLowerCase()
+  if (normalized === 'closed' || normalized === 'performing') {
+    return 'bg-green-600'
+  }
+  return 'bg-red-600'
+}
 </script>
 
 <template>
@@ -901,43 +1077,51 @@ onMounted(() => {
                 <!-- Row 1 -->
                 <div>
                   <p class="mb-1">Total active monthly installment</p>
-                  <p class="font-bold text-gray-900">{{ summary.TotalMonthlyInstalment }}</p>
+                  <p class="font-bold text-gray-900">
+                    {{ summary.TotalMonthlyInstalment || 0.0 }}
+                  </p>
                 </div>
                 <div>
                   <p class="mb-1">Total no of credit facilities</p>
-                  <p class="font-bold text-gray-900">{{ summary.TotalAccounts }}</p>
+                  <p class="font-bold text-gray-900">{{ summary.TotalAccounts || 0 }}</p>
                 </div>
                 <div>
                   <p class="mb-1">Total no of open facilities</p>
-                  <p class="font-bold text-gray-900">{{ displayValue(summary.totalOpen) }}</p>
+                  <p class="font-bold text-gray-900">{{ summary.totalOpen || 0 }}</p>
                 </div>
 
                 <!-- Row 2 -->
                 <div>
                   <p class="mb-1">Total arrear amount</p>
-                  <p class="font-bold text-gray-900">{{ summary.Amountarrear }}</p>
+                  <p class="font-bold text-gray-900">{{ summary.Amountarrear || 0.0 }}</p>
                 </div>
                 <div>
                   <p class="mb-1">Total outstanding debts</p>
-                  <p class="font-bold text-gray-900">{{ summary.TotalOutstandingdebt }}</p>
+                  <p class="font-bold text-gray-900">
+                    {{ summary.TotalOutstandingdebt || 0.0 }}
+                  </p>
                 </div>
                 <div>
                   <p class="mb-1">Total no of closed credit facilities</p>
-                  <p class="font-bold text-gray-900">{{ displayValue(summary.totalClosed) }}</p>
+                  <p class="font-bold text-gray-900">{{ summary.totalClosed || 0 }}</p>
                 </div>
 
                 <!-- Row 3 -->
                 <div>
                   <p class="mb-1">Total no of account in arrears</p>
-                  <p class="font-bold text-gray-900">{{ summary.TotalAccountarrear }}</p>
+                  <p class="font-bold text-gray-900">
+                    {{ summary.TotalAccountarrear || 0 }}
+                  </p>
                 </div>
                 <div>
                   <p class="mb-1">Total no of delinquent facilities</p>
-                  <p class="font-bold text-gray-900">{{ fcbcHighestDelinquencyRatingCount }}</p>
+                  <p class="font-bold text-gray-900">
+                    {{ summary.TotalaccountinBadcondition || 0 }}
+                  </p>
                 </div>
                 <div>
                   <p class="mb-1">Total no written off facilities</p>
-                  <p class="font-bold text-gray-900">{{ displayValue(summary.totalWrittenOff) }}</p>
+                  <p class="font-bold text-gray-900">{{ summary.totalWrittenOff || 0 }}</p>
                 </div>
               </div>
 
@@ -978,19 +1162,66 @@ onMounted(() => {
 
                   <!-- Expanded content -->
                   <template #expanded-row="{ item }">
-                    <td :colspan="loanHeaders.length" class="px-4 py-2 bg-gray-50 mb-4">
+                    <td :colspan="loanHeaders.length" class="px-4 py-2 bg-gray-90 mb-4">
                       <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                        <p><strong>Account number:</strong> {{ item.accountNo }}</p>
-                        <p><strong>Loan Amount:</strong> {{ item.amount }}</p>
-                        <p><strong>Current Balance:</strong> {{ item.balance }}</p>
-                        <p><strong>Amount Overdue:</strong> {{ item.overdue }}</p>
-                        <p><strong>Instalment Amount:</strong> {{ item.instalment }}</p>
-                        <p><strong>Loan Duration:</strong> {{ item.loanDuration }}</p>
-                        <p><strong>Repayment Frequency:</strong> {{ item.repaymentFrequency }}</p>
-                        <p><strong>Date Account Opened:</strong> {{ item.date }}</p>
-                        <p><strong>Closed Date:</strong> {{ item.closedDate }}</p>
-                        <p><strong>Performance Status:</strong> {{ item.performanceStatus }}</p>
-                        <p><strong>Account Status:</strong> {{ item.status }}</p>
+                        <p>
+                          Account number: <strong>{{ displayValue(item.accountNo) }}</strong>
+                        </p>
+                        <p>
+                          Loan Amount: <strong>{{ item.amount || 0 }}</strong>
+                        </p>
+                        <p>
+                          Current Balance: <strong>{{ item.balance || 0 }}</strong>
+                        </p>
+                        <p>
+                          Amount Overdue: <strong>{{ item.overdue || 0 }}</strong>
+                        </p>
+                        <p>
+                          Instalment Amount: <strong>{{ item.instalment || 0 }}</strong>
+                        </p>
+                        <p>
+                          Loan Duration: <strong>{{ displayValue(item.duration) }}</strong>
+                        </p>
+                        <p>
+                          Repayment Frequency:
+                          <strong>{{ displayValue(item.repaymentFrequency) }}</strong>
+                        </p>
+                        <p>
+                          Date Account Opened: <strong>{{ displayValue(item.date) }}</strong>
+                        </p>
+                        <p>
+                          Closed Date: <strong>{{ displayValue(item.closedDate) }}</strong>
+                        </p>
+
+                        <!-- Performance Status -->
+                        <div>
+                          Performance Status <br />
+                          <div
+                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1"
+                            :class="getChipStyle(item.performanceStatus)"
+                          >
+                            <span
+                              class="h-1.5 w-1.5 rounded-full mr-1.5"
+                              :class="getDotColor(item.performanceStatus)"
+                            ></span>
+                            <strong>{{ item.performanceStatus || 'N/A' }}</strong>
+                          </div>
+                        </div>
+
+                        <!-- Account Status -->
+                        <div>
+                          Account Status <br />
+                          <div
+                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1"
+                            :class="getChipStyle(item.status)"
+                          >
+                            <span
+                              class="h-1.5 w-1.5 rounded-full mr-1.5"
+                              :class="getDotColor(item.status)"
+                            ></span>
+                            <strong>{{ item.status || 'N/A' }}</strong>
+                          </div>
+                        </div>
                       </div>
                     </td>
                   </template>
@@ -1098,7 +1329,7 @@ onMounted(() => {
                 <div>
                   <p class="mb-1">Latest Residential Address</p>
                   <p class="font-bold text-gray-900 leading-snug">
-                    {{ creditPersonal.ResidentialAddress1 || 'N/A' }}
+                    {{ creditPersonal?.address || 'N/A' }}
                   </p>
                 </div>
                 <div>
@@ -1140,15 +1371,54 @@ onMounted(() => {
               <!-- BUSINESS INFORMATION SECTION -->
               <div v-if="idType === 'business'" class="bg-white p-6 rounded space-y-4">
                 <h2 class="text-md font-semibold">Business Information</h2>
-
-                <div class="text-sm text-gray-500 italic">No business information available.</div>
+                <div
+                  class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-8 text-sm text-gray-600"
+                >
+                  <div>
+                    <p class="mb-1">Business Name</p>
+                    <p class="font-bold text-gray-900">
+                      {{ displayValue(creditRegistrybusinessName) }}
+                    </p>
+                  </div>
+                  <div>
+                    <p class="mb-1">Date of Incorporation</p>
+                    <p class="font-bold text-gray-900">N/A</p>
+                  </div>
+                  <div>
+                    <p class="mb-1">Business Address</p>
+                    <p class="font-bold text-gray-900">N/A</p>
+                  </div>
+                </div>
               </div>
 
               <!-- DIRECTOR INFORMATION TABLE -->
               <div v-if="idType === 'business'" class="bg-white p-6 rounded space-y-4 mt-4">
                 <h2 class="text-md font-semibold">Director Information</h2>
 
-                <div class="text-sm text-gray-500 italic">No director information available.</div>
+                <div v-if="creditDirectors.length > 0">
+                  <table class="min-w-full text-sm text-left">
+                    <thead class="text-xs font-semibold text-gray-700">
+                      <tr>
+                        <th class="">First Name</th>
+                        <th class="">Other Names</th>
+                        <th class="">Surname</th>
+                        <th class="">Identification Number</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(director, index) in creditDirectors" :key="index">
+                        <td class="py-2">{{ director.firstName }}</td>
+                        <td class="py-2">{{ director.otherNames }}</td>
+                        <td class="py-2">{{ director.surname }}</td>
+                        <td class="py-2">{{ director.identificationNumber }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div v-else class="text-sm text-gray-500 italic">
+                  No director information available.
+                </div>
               </div>
             </div>
 
@@ -1163,50 +1433,50 @@ onMounted(() => {
                 <!-- Row 1 -->
                 <div>
                   <p class="mb-1">Total active monthly installment</p>
-                  <p class="font-bold text-gray-900">{{ summary.TotalMonthlyInstalment }}</p>
+                  <p class="font-bold text-gray-900">N/A</p>
                 </div>
                 <div>
                   <p class="mb-1">Total no of credit facilities</p>
-                  <p class="font-bold text-gray-900">{{ fcbcCreditAgreementSummaryCount }}</p>
+                  <p class="font-bold text-gray-900">N/A</p>
                 </div>
                 <div>
                   <p class="mb-1">Total no of open facilities</p>
-                  <p class="font-bold text-gray-900">{{ summary.TotalOpenFacilities }}</p>
+                  <p class="font-bold text-gray-900">{{ creditRegistryTotalOpen || 0 }}</p>
                 </div>
 
                 <!-- Row 2 -->
                 <div>
                   <p class="mb-1">Total arrear amount</p>
-                  <p class="font-bold text-gray-900">{{ summary.Amountarrear }}</p>
+                  <p class="font-bold text-gray-900">N/A</p>
                 </div>
                 <div>
                   <p class="mb-1">Total outstanding debts</p>
-                  <p class="font-bold text-gray-900">{{ summary.TotalOutstandingdebt }}</p>
+                  <p class="font-bold text-gray-900">N/A</p>
                 </div>
                 <div>
                   <p class="mb-1">Total no of closed credit facilities</p>
-                  <p class="font-bold text-gray-900"></p>
+                  <p class="font-bold text-gray-900">{{ creditRegistryTotalClosed || 0 }}</p>
                 </div>
 
                 <!-- Row 3 -->
                 <div>
                   <p class="mb-1">Total no of account in arrears</p>
-                  <p class="font-bold text-gray-900">{{ summary.TotalAccountarrear }}</p>
+                  <p class="font-bold text-gray-900">N/A</p>
                 </div>
                 <div>
                   <p class="mb-1">Total no of delinquent facilities</p>
-                  <p class="font-bold text-gray-900">{{ fcbcHighestDelinquencyRatingCount }}</p>
+                  <p class="font-bold text-gray-900">N/A</p>
                 </div>
                 <div>
                   <p class="mb-1">Total no written off facilities</p>
-                  <p class="font-bold text-gray-900">{{ summary.TotalWrittenOffFacilities }}</p>
+                  <p class="font-bold text-gray-900">{{ creditRegistryTotalWrittenOff || 0 }}</p>
                 </div>
               </div>
 
               <!-- Fallback if no data -->
             </div>
 
-            <!-- Performaing Accounts Table -->
+            <!-- Performing Accounts Table -->
             <div class="bg-white p-6 rounded">
               <h2 class="text-md font-semibold mb-4">Performing Accounts</h2>
 
@@ -1218,7 +1488,7 @@ onMounted(() => {
                   :expanded.sync="expanded"
                   show-expand
                   fixed-header
-                  height="400"
+                  height="300"
                   hide-default-footer
                   class="elevation-1"
                 >
@@ -1243,25 +1513,66 @@ onMounted(() => {
 
                   <!-- Expanded row content -->
                   <template #expanded-row="{ item }">
-                    <td :colspan="loanHeaders.length" class="p-4 bg-gray-50">
+                    <td :colspan="loanHeaders.length" class="px-4 py-2 bg-gray-90 mb-4">
                       <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                        <p><strong>Account number:</strong> {{ item.accountNo }}</p>
-                        <p><strong>Loan Amount:</strong> {{ item.amount.toLocaleString() }}</p>
-                        <p><strong>Current Balance:</strong> {{ item.balance.toLocaleString() }}</p>
                         <p>
-                          <strong>Amount Overdue:</strong> {{ item.overdue?.toLocaleString() || 0 }}
+                          Account number: <strong>{{ displayValue(item.accountNo) }}</strong>
                         </p>
                         <p>
-                          <strong>Instalment Amount:</strong> ₦{{
-                            item.instalment?.toLocaleString() || 0
-                          }}
+                          Loan Amount: <strong>{{ item.amount || 0 }}</strong>
                         </p>
-                        <p><strong>Loan Duration:</strong> {{ item.duration }} months</p>
-                        <p><strong>Repayment Frequency:</strong> {{ item.repaymentFrequency }}</p>
-                        <p><strong>Date Account Opened:</strong> {{ item.date }}</p>
-                        <p><strong>Closed Date:</strong> {{ item.closedDate }}</p>
-                        <p><strong>Performance Status:</strong> {{ item.performanceStatus }}</p>
-                        <p><strong>Account Status:</strong> {{ item.status }}</p>
+                        <p>
+                          Current Balance: <strong>{{ item.balance || 0 }}</strong>
+                        </p>
+                        <p>
+                          Amount Overdue: <strong>{{ item.overdue || 0 }}</strong>
+                        </p>
+                        <p>
+                          Instalment Amount: <strong>{{ item.instalment || 0 }}</strong>
+                        </p>
+                        <p>
+                          Loan Duration: <strong>{{ displayValue(item.duration) }} months</strong>
+                        </p>
+                        <p>
+                          Repayment Frequency:
+                          <strong>{{ displayValue(item.repaymentFrequency) }}</strong>
+                        </p>
+                        <p>
+                          Date Account Opened: <strong>{{ displayValue(item.date) }}</strong>
+                        </p>
+                        <p>
+                          Closed Date: <strong>{{ displayValue(item.closedDate) }}</strong>
+                        </p>
+
+                        <!-- Performance Status -->
+                        <div>
+                          Performance Status <br />
+                          <div
+                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1"
+                            :class="getChipStyle(item.performanceStatus)"
+                          >
+                            <span
+                              class="h-1.5 w-1.5 rounded-full mr-1.5"
+                              :class="getDotColor(item.performanceStatus)"
+                            ></span>
+                            <strong>{{ item.performanceStatus || 'N/A' }}</strong>
+                          </div>
+                        </div>
+
+                        <!-- Account Status -->
+                        <div>
+                          Account Status <br />
+                          <div
+                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1"
+                            :class="getChipStyle(item.status)"
+                          >
+                            <span
+                              class="h-1.5 w-1.5 rounded-full mr-1.5"
+                              :class="getDotColor(item.status)"
+                            ></span>
+                            <strong>{{ item.status || 'N/A' }}</strong>
+                          </div>
+                        </div>
                       </div>
                     </td>
                   </template>
@@ -1274,113 +1585,324 @@ onMounted(() => {
             <!-- Delinquents Accounts -->
             <div class="bg-white p-6 rounded-md shadow">
               <h2 class="text-md font-semibold mb-4">Deliquents Accounts</h2>
-              <table class="min-w-full text-left text-sm">
-                <thead class="bg-gray-100">
-                  <tr>
-                    <th class="p-3 border-b">Lender's Name</th>
-                    <th class="p-3 border-b">Disbursement Date</th>
-                    <th class="p-3 border-b">Loan Amount</th>
-                    <th class="p-3 border-b">Loan Balance</th>
-                    <th class="p-3 border-b">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-if="delinquentAccounts.length === 0">
-                    <td colspan="5" class="p-4 text-center text-gray-500">
-                      No delinquents accounts available.
+              <div v-if="delinquentAccounts && delinquentAccounts.length > 0">
+                <v-data-table
+                  :headers="delinquentHeaders"
+                  :items="delinquentAccounts"
+                  item-value="uid"
+                  :expanded.sync="expanded"
+                  show-expand
+                  fixed-header
+                  height="300"
+                  hide-default-footer
+                  class="elevation-1"
+                >
+                  <!-- Status badge -->
+                  <template #item.status="{ item }">
+                    <v-chip
+                      :color="item.status === 'Closed' ? 'green' : 'red'"
+                      variant="tonal"
+                      size="small"
+                      class="text-white"
+                    >
+                      {{ item.status }}
+                    </v-chip>
+                  </template>
+
+                  <!-- Action button -->
+                  <template #item.action="{ item }">
+                    <v-btn size="small" color="primary" @click="toggleRow(item.uid)">
+                      {{ isExpanded(item.uid) ? 'Hide' : 'View' }}
+                    </v-btn>
+                  </template>
+
+                  <!-- Expanded content -->
+                  <template #expanded-row="{ item }">
+                    <td :colspan="delinquentHeaders.length" class="px-4 py-2 bg-gray-90 mb-4">
+                      <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                        <p>
+                          Account number: <strong>{{ displayValue(item.accountNo) }}</strong>
+                        </p>
+                        <p>
+                          Loan Amount: <strong>₦{{ item.amount?.toLocaleString() || '0' }}</strong>
+                        </p>
+                        <p>
+                          Current Balance:
+                          <strong>₦{{ item.balance?.toLocaleString() || '0' }}</strong>
+                        </p>
+                        <p>
+                          Amount Overdue:
+                          <strong>₦{{ item.overdue?.toLocaleString() || '0' }}</strong>
+                        </p>
+                        <p>
+                          Instalment Amount:
+                          <strong>₦{{ item.instalment?.toLocaleString() || '0' }}</strong>
+                        </p>
+                        <p>
+                          Loan Duration: <strong>{{ displayValue(item.duration) }} months</strong>
+                        </p>
+                        <p>
+                          Repayment Frequency:
+                          <strong>{{ displayValue(item.repaymentFrequency) }}</strong>
+                        </p>
+                        <p>
+                          Date Account Opened: <strong>{{ displayValue(item.date) }}</strong>
+                        </p>
+                        <p>
+                          Closed Date: <strong>{{ displayValue(item.closedDate) }}</strong>
+                        </p>
+
+                        <!-- Performance Status -->
+                        <div>
+                          Performance Status <br />
+                          <div
+                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1"
+                            :class="getChipStyle(item.performanceStatus)"
+                          >
+                            <span
+                              class="h-1.5 w-1.5 rounded-full mr-1.5"
+                              :class="getDotColor(item.performanceStatus)"
+                            ></span>
+                            <strong>{{ item.performanceStatus || 'N/A' }}</strong>
+                          </div>
+                        </div>
+
+                        <!-- Account Status -->
+                        <div>
+                          Account Status <br />
+                          <div
+                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1"
+                            :class="getChipStyle(item.status)"
+                          >
+                            <span
+                              class="h-1.5 w-1.5 rounded-full mr-1.5"
+                              :class="getDotColor(item.status)"
+                            ></span>
+                            <strong>{{ item.status || 'N/A' }}</strong>
+                          </div>
+                        </div>
+                      </div>
                     </td>
-                  </tr>
-                  <tr
-                    v-for="(loan, index) in delinquentAccounts"
-                    :key="'delinquents-' + index"
-                    class="hover:bg-gray-50"
-                  >
-                    <td class="p-3 border-b">{{ loan.lender }}</td>
-                    <td class="p-3 border-b">{{ loan.date }}</td>
-                    <td class="p-3 border-b">₦{{ loan.amount.toLocaleString() }}</td>
-                    <td class="p-3 border-b">₦{{ loan.balance.toLocaleString() }}</td>
-                    <td class="p-3 border-b">
-                      <button
-                        class="bg-red-600 text-white text-xs px-3 py-1 rounded hover:bg-red-700"
-                      >
-                        View
-                      </button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+                  </template>
+                </v-data-table>
+              </div>
+
+              <div v-else class="text-sm text-gray-500 italic">
+                No delinquent accounts available.
+              </div>
             </div>
 
             <!-- Closed Accounts -->
             <div class="bg-white p-6 rounded-md shadow">
               <h2 class="text-md font-semibold mb-4">Closed Accounts</h2>
-              <table class="min-w-full text-left text-sm">
-                <thead class="bg-gray-100">
-                  <tr>
-                    <th class="p-3 border-b">Lender's Name</th>
-                    <th class="p-3 border-b">Disbursement Date</th>
-                    <th class="p-3 border-b">Loan Amount</th>
-                    <th class="p-3 border-b">Loan Balance</th>
-                    <th class="p-3 border-b">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-if="closedAccounts.length === 0">
-                    <td colspan="5" class="p-4 text-center text-gray-500">
-                      No closed accounts available.
+              <div v-if="closedAccounts && closedAccounts.length > 0">
+                <v-data-table
+                  :headers="closedHeaders"
+                  :items="closedAccounts"
+                  item-value="uid"
+                  :expanded.sync="expanded"
+                  show-expand
+                  fixed-header
+                  height="300"
+                  hide-default-footer
+                  class="elevation-1"
+                >
+                  <!-- Status badge -->
+                  <template #item.status="{ item }">
+                    <v-chip
+                      :color="item.status === 'Closed' ? 'green' : 'red'"
+                      variant="tonal"
+                      size="small"
+                      class="text-white"
+                    >
+                      {{ item.status }}
+                    </v-chip>
+                  </template>
+
+                  <!-- Action button -->
+                  <template #item.action="{ item }">
+                    <v-btn size="small" color="primary" @click="toggleRow(item.uid)">
+                      {{ isExpanded(item.uid) ? 'Hide' : 'View' }}
+                    </v-btn>
+                  </template>
+
+                  <!-- Expanded content -->
+                  <template #expanded-row="{ item }">
+                    <td :colspan="closedHeaders.length" class="px-4 py-2 bg-gray-90 mb-4">
+                      <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                        <p>
+                          Account number: <strong>{{ displayValue(item.accountNo) }}</strong>
+                        </p>
+                        <p>
+                          Loan Amount: <strong>₦{{ item.amount?.toLocaleString() || '0' }}</strong>
+                        </p>
+                        <p>
+                          Current Balance:
+                          <strong>₦{{ item.balance?.toLocaleString() || '0' }}</strong>
+                        </p>
+                        <p>
+                          Amount Overdue:
+                          <strong>₦{{ item.overdue?.toLocaleString() || '0' }}</strong>
+                        </p>
+                        <p>
+                          Instalment Amount:
+                          <strong>₦{{ item.instalment?.toLocaleString() || '0' }}</strong>
+                        </p>
+                        <p>
+                          Loan Duration: <strong>{{ displayValue(item.duration) }} months</strong>
+                        </p>
+                        <p>
+                          Repayment Frequency:
+                          <strong>{{ displayValue(item.repaymentFrequency) }}</strong>
+                        </p>
+                        <p>
+                          Date Account Opened: <strong>{{ displayValue(item.date) }}</strong>
+                        </p>
+                        <p>
+                          Closed Date: <strong>{{ displayValue(item.closedDate) }}</strong>
+                        </p>
+
+                        <!-- Performance Status -->
+                        <div>
+                          Performance Status <br />
+                          <div
+                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1"
+                            :class="getChipStyle(item.performanceStatus)"
+                          >
+                            <span
+                              class="h-1.5 w-1.5 rounded-full mr-1.5"
+                              :class="getDotColor(item.performanceStatus)"
+                            ></span>
+                            <strong>{{ item.performanceStatus || 'N/A' }}</strong>
+                          </div>
+                        </div>
+
+                        <!-- Account Status -->
+                        <div>
+                          Account Status <br />
+                          <div
+                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1"
+                            :class="getChipStyle(item.status)"
+                          >
+                            <span
+                              class="h-1.5 w-1.5 rounded-full mr-1.5"
+                              :class="getDotColor(item.status)"
+                            ></span>
+                            <strong>{{ item.status || 'N/A' }}</strong>
+                          </div>
+                        </div>
+                      </div>
                     </td>
-                  </tr>
-                  <tr
-                    v-for="(loan, index) in closedAccounts"
-                    :key="'delinquents-' + index"
-                    class="hover:bg-gray-50"
-                  >
-                    <td class="p-3 border-b">{{ loan.lender }}</td>
-                    <td class="p-3 border-b">{{ loan.date }}</td>
-                    <td class="p-3 border-b">₦{{ loan.amount.toLocaleString() }}</td>
-                    <td class="p-3 border-b">₦{{ loan.balance.toLocaleString() }}</td>
-                    <td class="p-3 border-b">
-                      <button
-                        class="bg-red-600 text-white text-xs px-3 py-1 rounded hover:bg-red-700"
-                      >
-                        View
-                      </button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+                  </template>
+                </v-data-table>
+              </div>
+
+              <div v-else class="text-sm text-gray-500 italic">No Closed accounts available.</div>
             </div>
 
             <!-- Written Off Accounts -->
             <div class="bg-white p-6 rounded mb-6">
               <h2 class="text-md font-semibold mb-4">Written Off Accounts</h2>
               <div v-if="writtenOffAccounts && writtenOffAccounts.length > 0">
-                <table class="min-w-full text-left">
-                  <thead>
-                    <tr class="bg-gray-100 text-sm">
-                      <th class="p-2">Lender's Name</th>
-                      <th class="p-2">Disbursement Date</th>
-                      <th class="p-2">Loan Amount</th>
-                      <th class="p-2">Loan Balance</th>
-                      <th class="p-2">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="(item, i) in writtenOffAccounts" :key="i" class="text-sm">
-                      <td class="p-2">{{ item.lender }}</td>
-                      <td class="p-2">{{ item.date }}</td>
-                      <td class="p-2">₦{{ item.amount.toLocaleString() }}</td>
-                      <td class="p-2">₦{{ item.balance.toLocaleString() }}</td>
-                      <td class="p-2">
-                        <button
-                          class="bg-blue-600 text-white text-xs px-3 py-1 rounded hover:bg-blue-700"
-                        >
-                          View
-                        </button>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                <v-data-table
+                  :headers="writtenOffHeaders"
+                  :items="writtenOffAccounts"
+                  item-value="uid"
+                  :expanded.sync="expanded"
+                  show-expand
+                  fixed-header
+                  height="300"
+                  hide-default-footer
+                  class="elevation-1"
+                >
+                  <!-- Status badge -->
+                  <template #item.status="{ item }">
+                    <v-chip
+                      :color="item.status === 'Closed' ? 'green' : 'red'"
+                      variant="tonal"
+                      size="small"
+                      class="text-white"
+                    >
+                      {{ item.status }}
+                    </v-chip>
+                  </template>
+
+                  <!-- Action button -->
+                  <template #item.action="{ item }">
+                    <v-btn size="small" color="primary" @click="toggleRow(item.uid)">
+                      {{ isExpanded(item.uid) ? 'Hide' : 'View' }}
+                    </v-btn>
+                  </template>
+
+                  <!-- Expanded content -->
+                  <template #expanded-row="{ item }">
+                    <td :colspan="writtenOffHeaders.length" class="px-4 py-2 bg-gray-90 mb-4">
+                      <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                        <p>
+                          Account number: <strong>{{ displayValue(item.accountNo) }}</strong>
+                        </p>
+                        <p>
+                          Loan Amount: <strong>₦{{ item.amount?.toLocaleString() || '0' }}</strong>
+                        </p>
+                        <p>
+                          Current Balance:
+                          <strong>₦{{ item.balance?.toLocaleString() || '0' }}</strong>
+                        </p>
+                        <p>
+                          Amount Overdue:
+                          <strong>₦{{ item.overdue?.toLocaleString() || '0' }}</strong>
+                        </p>
+                        <p>
+                          Instalment Amount:
+                          <strong>₦{{ item.instalment?.toLocaleString() || '0' }}</strong>
+                        </p>
+                        <p>
+                          Loan Duration: <strong>{{ displayValue(item.duration) }} months</strong>
+                        </p>
+                        <p>
+                          Repayment Frequency:
+                          <strong>{{ displayValue(item.repaymentFrequency) }}</strong>
+                        </p>
+                        <p>
+                          Date Account Opened: <strong>{{ displayValue(item.date) }}</strong>
+                        </p>
+                        <p>
+                          Closed Date: <strong>{{ displayValue(item.closedDate) }}</strong>
+                        </p>
+
+                        <!-- Performance Status -->
+                        <div>
+                          Performance Status <br />
+                          <div
+                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1"
+                            :class="getChipStyle(item.performanceStatus)"
+                          >
+                            <span
+                              class="h-1.5 w-1.5 rounded-full mr-1.5"
+                              :class="getDotColor(item.performanceStatus)"
+                            ></span>
+                            <strong>{{ item.performanceStatus || 'N/A' }}</strong>
+                          </div>
+                        </div>
+
+                        <!-- Account Status -->
+                        <div>
+                          Account Status <br />
+                          <div
+                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1"
+                            :class="getChipStyle(item.status)"
+                          >
+                            <span
+                              class="h-1.5 w-1.5 rounded-full mr-1.5"
+                              :class="getDotColor(item.status)"
+                            ></span>
+                            <strong>{{ item.status || 'N/A' }}</strong>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                  </template>
+                </v-data-table>
               </div>
               <div v-else class="text-sm text-gray-500 italic">
                 No written-off accounts available.
@@ -1391,32 +1913,105 @@ onMounted(() => {
             <div class="bg-white p-6 rounded mb-6">
               <h2 class="text-md font-semibold mb-4">Unknown Accounts Status</h2>
               <div v-if="unknownAccounts && unknownAccounts.length > 0">
-                <table class="min-w-full text-left">
-                  <thead>
-                    <tr class="bg-gray-100 text-sm">
-                      <th class="p-2">Lender's Name</th>
-                      <th class="p-2">Disbursement Date</th>
-                      <th class="p-2">Loan Amount</th>
-                      <th class="p-2">Loan Balance</th>
-                      <th class="p-2">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="(item, i) in unknownAccounts" :key="i" class="text-sm">
-                      <td class="p-2">{{ item.lender }}</td>
-                      <td class="p-2">{{ item.date }}</td>
-                      <td class="p-2">₦{{ item.amount.toLocaleString() }}</td>
-                      <td class="p-2">₦{{ item.balance.toLocaleString() }}</td>
-                      <td class="p-2">
-                        <button
-                          class="bg-blue-600 text-white text-xs px-3 py-1 rounded hover:bg-blue-700"
-                        >
-                          View
-                        </button>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                <v-data-table
+                  :headers="unknownHeaders"
+                  :items="unknownAccounts"
+                  item-value="uid"
+                  :expanded.sync="expanded"
+                  show-expand
+                  fixed-header
+                  height="300"
+                  hide-default-footer
+                  class="elevation-1"
+                >
+                  <!-- Status badge -->
+                  <template #item.status="{ item }">
+                    <v-chip
+                      :color="item.status === 'Closed' ? 'green' : 'red'"
+                      variant="tonal"
+                      size="small"
+                      class="text-white"
+                    >
+                      {{ item.status }}
+                    </v-chip>
+                  </template>
+
+                  <!-- Action button -->
+                  <template #item.action="{ item }">
+                    <v-btn size="small" color="primary" @click="toggleRow(item.uid)">
+                      {{ isExpanded(item.uid) ? 'Hide' : 'View' }}
+                    </v-btn>
+                  </template>
+
+                  <!-- Expanded content -->
+                  <template #expanded-row="{ item }">
+                    <td :colspan="unknownHeaders.length" class="px-4 py-2 bg-gray-90 mb-4">
+                      <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                        <p>
+                          Account number: <strong>{{ displayValue(item.accountNo) }}</strong>
+                        </p>
+                        <p>
+                          Loan Amount: <strong>₦{{ item.amount?.toLocaleString() || '0' }}</strong>
+                        </p>
+                        <p>
+                          Current Balance:
+                          <strong>₦{{ item.balance?.toLocaleString() || '0' }}</strong>
+                        </p>
+                        <p>
+                          Amount Overdue:
+                          <strong>₦{{ item.overdue?.toLocaleString() || '0' }}</strong>
+                        </p>
+                        <p>
+                          Instalment Amount:
+                          <strong>₦{{ item.instalment?.toLocaleString() || '0' }}</strong>
+                        </p>
+                        <p>
+                          Loan Duration: <strong>{{ displayValue(item.duration) }} months</strong>
+                        </p>
+                        <p>
+                          Repayment Frequency:
+                          <strong>{{ displayValue(item.repaymentFrequency) }}</strong>
+                        </p>
+                        <p>
+                          Date Account Opened: <strong>{{ displayValue(item.date) }}</strong>
+                        </p>
+                        <p>
+                          Closed Date: <strong>{{ displayValue(item.closedDate) }}</strong>
+                        </p>
+
+                        <!-- Performance Status -->
+                        <div>
+                          Performance Status <br />
+                          <div
+                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1"
+                            :class="getChipStyle(item.performanceStatus)"
+                          >
+                            <span
+                              class="h-1.5 w-1.5 rounded-full mr-1.5"
+                              :class="getDotColor(item.performanceStatus)"
+                            ></span>
+                            <strong>{{ item.performanceStatus || 'N/A' }}</strong>
+                          </div>
+                        </div>
+
+                        <!-- Account Status -->
+                        <div>
+                          Account Status <br />
+                          <div
+                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1"
+                            :class="getChipStyle(item.status)"
+                          >
+                            <span
+                              class="h-1.5 w-1.5 rounded-full mr-1.5"
+                              :class="getDotColor(item.status)"
+                            ></span>
+                            <strong>{{ item.status || 'N/A' }}</strong>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                  </template>
+                </v-data-table>
               </div>
               <div v-else class="text-sm text-gray-500 italic">No unknown accounts available.</div>
             </div>
@@ -1460,8 +2055,6 @@ onMounted(() => {
         :id-type="idType"
         :business-data="businessData"
         :directors="directors"
-        :fcbcCreditAgreementSummaryCount="fcbcCreditAgreementSummaryCount"
-        :fcbcHighestDelinquencyRatingCount="fcbcHighestDelinquencyRatingCount"
         ref="reportRef"
         :personal="personal"
         :summary="summary"
@@ -1476,6 +2069,12 @@ onMounted(() => {
         :written-off-accounts="writtenOffAccounts"
         :unknown-accounts="unknownAccounts"
         :inquiry-history="inquiryHistory"
+        :credit-personal="creditPersonal"
+        :credit-registry-business-name="creditRegistrybusinessName"
+        :credit-directors="creditDirectors"
+        :credit-registry-total-open="creditRegistryTotalOpen"
+        :credit-registry-total-closed="creditRegistryTotalClosed"
+        :credit-registry-total-written-off="creditRegistryTotalWrittenOff"
       />
     </div>
   </MainLayout>
