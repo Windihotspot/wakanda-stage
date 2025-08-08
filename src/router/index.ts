@@ -82,7 +82,13 @@ const router = createRouter({
       path: '/acceptinvite',
       name: 'acceptinvite',
       component: () => import('@/views/AcceptInviteSuccess.vue')
-    }
+    },
+       {
+      path: '/statement-analysis/:id',
+      name: 'StatementAnalysis',
+      component: () => import('@/views/StatementAnalysis.vue'),
+      props: true
+    },
   ]
 })
 
