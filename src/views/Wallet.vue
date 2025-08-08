@@ -32,7 +32,7 @@
 
       <!-- Tabs -->
       <div class="mt-6 pa-4">
-        <v-tabs class="mb-6" v-model="activeTab" background-color="blue" color="primary">
+        <v-tabs class="mb-6" v-model="activeTab" color="primary">
           <v-tab value="credit">Credit History</v-tab>
           <v-tab value="debit">Debit History</v-tab>
         </v-tabs>
@@ -131,7 +131,7 @@
             <div class="mt-2">
               <v-text-field
                 label="Amount"
-                v-model="amount"
+                v-model="formattedAmount"
                 ref="cleaveInput"
                 variant="outlined"
                 color="blue"
@@ -180,10 +180,9 @@
 </template>
 
 <script setup>
-
 import { ElNotification } from 'element-plus'
 import moment from 'moment'
-import { onMounted, ref, nextTick } from 'vue'
+import { onMounted, ref, reactive } from 'vue'
 import MainLayout from '@/layouts/full/MainLayout.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
@@ -195,10 +194,14 @@ const creditHistory = ref([])
 const activeTab = ref('credit') // Default tab to "Credit"
 const debitHistory = ref([]) // For debit transactions
 const authStore = useAuthStore()
-
-import Cleave from 'cleave.js'
+import { useFormattedField } from '@/composables/useFormattedFields'
 const cleaveInput = ref(null)
 const amount = ref(0)
+const form = reactive({
+  amount: null
+})
+
+const formattedAmount = useFormattedField(form, 'amount', { currency: true })
 
 function formatCurrency(number) {
   return new Intl.NumberFormat('en-NG', {
@@ -217,6 +220,7 @@ const headers = [
   { title: 'Old Balance', key: 'old_balance', sortable: true },
   { title: 'New Balance', key: 'new_balance', sortable: true }
 ]
+
 const loadingPayment = ref(true)
 
 // Fund Wallet Modal
@@ -238,22 +242,16 @@ const closeFundWallet = () => {
 const fetchWallet = async () => {
   const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
 
-console.log(savedAuth);
+  const token = savedAuth ? savedAuth?.token : computed(() => authStore.token)?.value
 
-const token = savedAuth
-  ? savedAuth?.token
-  : computed(() => authStore.token)?.value;
+  const tenantId = savedAuth
+    ? savedAuth.user?.business_name
+      ? savedAuth.user?.id
+      : savedAuth.user?.tenant_id
+    : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
+        ?.value
 
-const tenantId = savedAuth
-  ? savedAuth.user?.business_name
-    ? savedAuth.user?.id
-    : savedAuth.user?.tenant_id
-  : computed(() =>
-      authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id
-    )?.value;
-
-  const API_URL = `${import.meta.env.VITE_API_BASE_URL}
-/api/${tenantId}/get-tenant-wallet`
+  const API_URL = `${import.meta.env.VITE_API_BASE_URL}/api/${tenantId}/get-tenant-wallet`
   isLoading.value = true
   try {
     const response = await axios.get(API_URL, {
@@ -264,6 +262,7 @@ const tenantId = savedAuth
     console.log('fetch wallet data:', response)
 
     balance.value = response.data.data.wallet.balance
+    console.log('Team wallet balance:', balance.value)
   } catch (error) {
     console.error('Error fetching wallet:', error)
   } finally {
@@ -274,23 +273,16 @@ const tenantId = savedAuth
 const fetchWalletTransactions = async () => {
   const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
 
-console.log(savedAuth);
+  const token = savedAuth ? savedAuth?.token : computed(() => authStore.token)?.value
 
-const token = savedAuth
-  ? savedAuth?.token
-  : computed(() => authStore.token)?.value;
+  const tenantId = savedAuth
+    ? savedAuth.user?.business_name
+      ? savedAuth.user?.id
+      : savedAuth.user?.tenant_id
+    : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
+        ?.value
 
-const tenantId = savedAuth
-  ? savedAuth.user?.business_name
-    ? savedAuth.user?.id
-    : savedAuth.user?.tenant_id
-  : computed(() =>
-      authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id
-    )?.value;
-
-
-  const API_URL = `${import.meta.env.VITE_API_BASE_URL}
-/api/${tenantId}/get-wallet-transactions`
+  const API_URL = `${import.meta.env.VITE_API_BASE_URL}/api/${tenantId}/get-wallet-transactions`
   isLoading.value = true
 
   try {
@@ -307,7 +299,7 @@ const tenantId = savedAuth
     debitHistory.value = []
 
     transactions.forEach((tx) => {
-      const data = tx.transaction_data ? (tx.transaction_data) : {}
+      const data = tx.transaction_data ? tx.transaction_data : {}
 
       const base = {
         date: tx.created_at,
@@ -331,19 +323,16 @@ const tenantId = savedAuth
 const fundWallet = async () => {
   const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
 
-console.log(savedAuth);
+  console.log(savedAuth)
 
-const token = savedAuth
-  ? savedAuth?.token
-  : computed(() => authStore.token)?.value;
+  const token = savedAuth ? savedAuth?.token : computed(() => authStore.token)?.value
 
-const tenantId = savedAuth
-  ? savedAuth.user?.business_name
-    ? savedAuth.user?.id
-    : savedAuth.user?.tenant_id
-  : computed(() =>
-      authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id
-    )?.value;
+  const tenantId = savedAuth
+    ? savedAuth.user?.business_name
+      ? savedAuth.user?.id
+      : savedAuth.user?.tenant_id
+    : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
+        ?.value
 
   const loading = ref(false)
 
@@ -357,8 +346,7 @@ const tenantId = savedAuth
   //   return
   // }
 
-  const API_URL = `${import.meta.env.VITE_API_BASE_URL}
-/api/${tenantId}/initialize-payment`
+  const API_URL = `${import.meta.env.VITE_API_BASE_URL}/api/${tenantId}/initialize-payment`
   console.log('fund wallet amount:', amount.value)
   console.log('fund wallet token:', token)
 
@@ -409,18 +397,6 @@ const onIframeLoad = () => {
 onMounted(async () => {
   fetchWallet()
   fetchWalletTransactions()
-  await nextTick() // Wait until DOM is fully updated
-  if (cleaveInput.value) {
-    new Cleave(cleaveInput.value.$el.querySelector('input'), {
-      numeral: true,
-      numeralThousandsGroupStyle: 'thousand',
-      prefix: '₦',
-      rawValueTrimPrefix: true,
-      onValueChanged: (e) => {
-        amount.value = parseFloat(e.target.rawValue.replace(/,/g, '')) || 0
-      }
-    })
-  }
 })
 </script>
 

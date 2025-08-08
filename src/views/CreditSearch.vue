@@ -305,11 +305,12 @@ const submitCompanyForm = async () => {
   try {
     loading.value = true
     const payload = {
+      businessName: businessName,
       id_type: 'business',
       id_string: rcNumber.value,
       purpose: enquiryReasonCompany.value,
       refresh: true,
-      services: ['credit_registry', 'fcbc']
+      services: selectedServices
     }
 
     console.log('Sending credit check request payload:', payload)
