@@ -35,7 +35,7 @@ const submitForm = async () => {
         password: loginForm.value.password
       }
     )
-
+      console.log("login remember me:", loginForm.value.remember)
     console.log('Login successful:', response.data)
     // Extract data from the response properly
     const { token, user, verification_status } = response.data.data

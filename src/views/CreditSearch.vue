@@ -391,8 +391,10 @@ onMounted(() => {
     <div class="p-4 rounded shadow-sm bg-white m-4">
       <!-- Header with Title and New credit search Button -->
       <div class="bg-white flex justify-between items-center border-b p-2">
+         
         <div class="mb-2">
-          <h1 class="text-xl font-bold">Credit Search</h1>
+          
+          <h1 class="text-xl font-bold mt-4">Credit Search</h1>
           <p class="text-gray-500 text-sm mt-1">View and Manage your credit search</p>
         </div>
 

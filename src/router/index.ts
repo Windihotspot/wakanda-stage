@@ -83,13 +83,23 @@ const router = createRouter({
       name: 'acceptinvite',
       component: () => import('@/views/AcceptInviteSuccess.vue')
     },
-       {
-      path: '/statement-analysis/:id',
+    {
+      path: '/analysis/:id/:status?',
       name: 'StatementAnalysis',
       component: () => import('@/views/StatementAnalysis.vue'),
       props: true
-    },
+    }
   ]
 })
 
+router.beforeEach((to, from, next) => {
+  const isAuthenticated = !!localStorage.getItem('data')
+  const publicPages = ['/', '/signup', '/resetpassword', '/passwordreset', '/acceptinvite']
+
+  if (!isAuthenticated && !publicPages.includes(to.path)) {
+    return next('/')
+  }
+
+  next()
+})
 export default router

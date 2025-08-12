@@ -2,7 +2,7 @@
   <MainLayout>
     <div class="p-2">
       <template v-if="loading">
-        <div class="flex items-center justify-center h-96">
+        <div class="flex items-center justify-center h-screen">
           <v-progress-circular
             :size="100"
             :width="10"
@@ -11,6 +11,16 @@
           ></v-progress-circular>
         </div>
       </template>
+
+      <div v-else-if="status === 'FAILED'" class="text-center flex flex-col align-center mx-auto my-auto justify-center h-screen">
+        <img src="../assets/Error Fall Down.png" alt="Failed" class="mx-auto h-48" />
+        <p class=" mt-4">
+          There was an error during file processing. Jupita will work promptly to resolve this
+          issue. <br> If you have any further questions, please don't hesitate to
+          <a href="" class="text-[#1f5aa3]">Contact Us..</a>
+        </p>
+      </div>
+
       <template v-else>
         <div class="p-2 md:p-8">
           <RouterLink to="/dashboard">
@@ -738,6 +748,10 @@ import MainLayout from '@/layouts/full/MainLayout.vue'
 import moment from 'moment'
 import { ElMessage, ElNotification } from 'element-plus'
 import { saveAs } from 'file-saver'
+const route = useRoute()
+const analysisId = route.params.id
+const status = route.params.status
+console.log('statement status:', status)
 
 const activeTab = ref('Summary')
 
@@ -763,7 +777,6 @@ const salary = [
   // Repeat for as many rows as needed...
 ]
 const rowsPerPage = ref(15)
-const route = useRoute()
 const authStore = useAuthStore()
 
 const result = ref(null)
@@ -859,7 +872,7 @@ const transactions = ref([])
 const allTransactions = ref([])
 const income = ref({})
 const statementType = ref(null)
-
+const statementStatus = ref(null)
 
 // Function to format the balance range (e.g., "1000 - 100000")
 const formatBalanceRange = () => {
@@ -879,19 +892,16 @@ const formatBalanceRange = () => {
 const fetchAnalysisResult = async (analysisId) => {
   const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
 
-console.log(savedAuth);
+  console.log(savedAuth)
 
-const token = savedAuth
-  ? savedAuth?.token
-  : computed(() => authStore.token)?.value;
+  const token = savedAuth ? savedAuth?.token : computed(() => authStore.token)?.value
 
-const tenantId = savedAuth
-  ? savedAuth.user?.business_name
-    ? savedAuth.user?.id
-    : savedAuth.user?.tenant_id
-  : computed(() =>
-      authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id
-    )?.value;
+  const tenantId = savedAuth
+    ? savedAuth.user?.business_name
+      ? savedAuth.user?.id
+      : savedAuth.user?.tenant_id
+    : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
+        ?.value
 
   const apiUrl = `${import.meta.env.VITE_API_BASE_URL}
 /api/${tenantId}/get-analysis-result?analysis_id=${analysisId}`
@@ -1027,22 +1037,22 @@ const tenantId = savedAuth
       {
         label: 'Rent',
         monthly: spend.averageMonthlySpendOnRent ?? 0,
-        total: spend.totalSpendOnRent ?? 0,
+        total: spend.totalSpendOnRent ?? 0
       },
       {
         label: 'Hospitality and Food',
         monthly: spend.averageMonthlySpendOnHospitalityAndFood ?? 0,
-        total: spend.totalSpendOnHospitalityAndFood ?? 0,
+        total: spend.totalSpendOnHospitalityAndFood ?? 0
       },
       {
         label: 'Transportation',
         monthly: spend.averageMonthlySpendOnTransportation ?? 0,
-        total: spend.totalSpendOnTransportation ?? 0,
+        total: spend.totalSpendOnTransportation ?? 0
       },
       {
         label: 'Utilities',
         monthly: spend.averageMonthlySpendOnUtilities ?? 0,
-        total: spend.totalSpendOnUtilities ?? 0,
+        total: spend.totalSpendOnUtilities ?? 0
       },
       {
         label: 'Charges and Stamp Duty',
@@ -1282,25 +1292,21 @@ const inflowOutflowStatus = computed(() => {
   return 'neutral'
 })
 
-
 const isConsumer = computed(() => statementType.value === 'CONSUMER')
 
 const fetchTransactions = async (id) => {
   const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
 
-console.log(savedAuth);
+  console.log(savedAuth)
 
-const token = savedAuth
-  ? savedAuth?.token
-  : computed(() => authStore.token)?.value;
+  const token = savedAuth ? savedAuth?.token : computed(() => authStore.token)?.value
 
-const tenantId = savedAuth
-  ? savedAuth.user?.business_name
-    ? savedAuth.user?.id
-    : savedAuth.user?.tenant_id
-  : computed(() =>
-      authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id
-    )?.value;
+  const tenantId = savedAuth
+    ? savedAuth.user?.business_name
+      ? savedAuth.user?.id
+      : savedAuth.user?.tenant_id
+    : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
+        ?.value
 
   const analysisId = route.params.id
 
@@ -1404,19 +1410,16 @@ onMounted(() => {
 const downloadAnalysis = async () => {
   const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
 
-console.log(savedAuth);
+  console.log(savedAuth)
 
-const token = savedAuth
-  ? savedAuth?.token
-  : computed(() => authStore.token)?.value;
+  const token = savedAuth ? savedAuth?.token : computed(() => authStore.token)?.value
 
-const tenantId = savedAuth
-  ? savedAuth.user?.business_name
-    ? savedAuth.user?.id
-    : savedAuth.user?.tenant_id
-  : computed(() =>
-      authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id
-    )?.value;
+  const tenantId = savedAuth
+    ? savedAuth.user?.business_name
+      ? savedAuth.user?.id
+      : savedAuth.user?.tenant_id
+    : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
+        ?.value
 
   const analysisId = route.params.id
 

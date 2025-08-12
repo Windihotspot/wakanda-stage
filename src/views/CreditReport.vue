@@ -899,7 +899,13 @@ function getDotColor(status) {
 
 <template>
   <MainLayout>
-    <div class="flex justify-between items-center p-2">
+    <RouterLink to="/credit-search">
+      <button class="m-2 flex items-center text-black text-lg font-normal">
+        <i class="fas fa-circle-arrow-left mr-2 text-xl" style="color: #2563eb"></i> Back
+      </button>
+    </RouterLink>
+
+    <div class="mt- 4 flex justify-between items-center p-2">
       <!-- Tabs -->
       <div class="flex space-x-4">
         <button
