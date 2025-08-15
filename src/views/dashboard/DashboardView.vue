@@ -199,7 +199,7 @@ onMounted(() => {
 
       <div v-else-if="statements.length > 0" class="overflow-x-auto">
         <table class="min-w-full">
-          <thead class="font-semibold uppercase text-sm leading-normal">
+          <thead class="font-semibold uppercase text-xs leading-normal">
             <tr>
               <th class="py-3 px-6 text-left">S/N</th>
 

@@ -32,7 +32,7 @@
 
       <!-- Tabs -->
       <div class="mt-6 pa-4">
-        <v-tabs class="mb-6" v-model="activeTab"  color="primary">
+        <v-tabs class="mb-6" v-model="activeTab" color="primary">
           <v-tab value="credit">Credit History</v-tab>
           <v-tab value="debit">Debit History</v-tab>
         </v-tabs>
@@ -126,19 +126,15 @@
       <!-- Fund Wallet Modal -->
       <v-dialog v-model="fundWalletDialog" max-width="400px">
         <v-card>
-          <v-card-title class="text-h5">Fund Wallet</v-card-title>
+          <v-card-title class="text-h5 m-2 font-semibold">Fund Wallet</v-card-title>
           <v-card-text>
             <div class="mt-2">
               <v-text-field
                 label="Amount"
-                v-model="amount"
-                ref="cleaveInput"
+                v-model="formattedAmount"
                 variant="outlined"
                 color="blue"
               >
-                <template v-slot:prepend>
-                  <span>₦</span>
-                </template>
               </v-text-field>
             </div>
           </v-card-text>
@@ -180,7 +176,7 @@
 </template>
 
 <script setup>
-
+import { reactive } from 'vue'
 import { ElNotification } from 'element-plus'
 import moment from 'moment'
 import { onMounted, ref, nextTick } from 'vue'
@@ -189,16 +185,19 @@ import { useAuthStore } from '@/stores/auth'
 import { useRouter } from 'vue-router'
 const router = useRouter()
 import axios from 'axios'
-import Swal from 'sweetalert2'
 const loading = ref(false)
 const creditHistory = ref([])
 const activeTab = ref('credit') // Default tab to "Credit"
 const debitHistory = ref([]) // For debit transactions
 const authStore = useAuthStore()
+import { useFormattedFields } from '@/composables/useFormattedFields'
+// Make reactive target object
+const form = reactive({
+  amount: 0
+})
 
-import Cleave from 'cleave.js'
-const cleaveInput = ref(null)
-const amount = ref(0)
+// Use the composable for currency formatting
+const formattedAmount = useFormattedFields(form, 'amount', { currency: true })
 
 function formatCurrency(number) {
   return new Intl.NumberFormat('en-NG', {
@@ -238,24 +237,20 @@ const closeFundWallet = () => {
 const fetchWallet = async () => {
   const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
 
+  const token = savedAuth ? savedAuth?.token : computed(() => authStore.token)?.value
 
-const token = savedAuth
-  ? savedAuth?.token
-  : computed(() => authStore.token)?.value;
-
-const tenantId = savedAuth
-  ? savedAuth.user?.business_name
-    ? savedAuth.user?.id
-    : savedAuth.user?.tenant_id
-  : computed(() =>
-      authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id
-    )?.value;
+  const tenantId = savedAuth
+    ? savedAuth.user?.business_name
+      ? savedAuth.user?.id
+      : savedAuth.user?.tenant_id
+    : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
+        ?.value
 
   const API_URL = `https://dev02201.getjupita.com/api/${tenantId}/get-tenant-wallet`
   isLoading.value = true
-  console.log('fetchWallet - token:', token);
-  console.log('fetchWallet - tenantId:', tenantId);
-  console.log('fetchWallet - API_URL:', API_URL);
+  // console.log('fetchWallet - token:', token)
+  // console.log('fetchWallet - tenantId:', tenantId)
+  // console.log('fetchWallet - API_URL:', API_URL)
   try {
     const response = await axios.get(API_URL, {
       headers: {
@@ -265,9 +260,9 @@ const tenantId = savedAuth
     console.log('fetch wallet data:', response)
 
     balance.value = response.data.data.wallet.balance
-     isLoading.value = false
+    isLoading.value = false
   } catch (error) {
-    console.error('Error fetching wallet:', error)
+    console.log('Error fetching wallet:', error.response.data)
   } finally {
     isLoading.value = false
   }
@@ -275,21 +270,17 @@ const tenantId = savedAuth
 
 const fetchWalletTransactions = async () => {
   const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
-  
-console.log(savedAuth);
 
-const token = savedAuth
-  ? savedAuth?.token
-  : computed(() => authStore.token)?.value;
+  console.log(savedAuth)
 
-const tenantId = savedAuth
-  ? savedAuth.user?.business_name
-    ? savedAuth.user?.id
-    : savedAuth.user?.tenant_id
-  : computed(() =>
-      authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id
-    )?.value;
+  const token = savedAuth ? savedAuth?.token : computed(() => authStore.token)?.value
 
+  const tenantId = savedAuth
+    ? savedAuth.user?.business_name
+      ? savedAuth.user?.id
+      : savedAuth.user?.tenant_id
+    : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
+        ?.value
 
   const API_URL = `https://dev02201.getjupita.com/api/${tenantId}/get-wallet-transactions`
   isLoading.value = true
@@ -308,7 +299,7 @@ const tenantId = savedAuth
     debitHistory.value = []
 
     transactions.forEach((tx) => {
-      const data = tx.transaction_data ? (tx.transaction_data) : {}
+      const data = tx.transaction_data ? tx.transaction_data : {}
 
       const base = {
         date: tx.created_at,
@@ -323,7 +314,7 @@ const tenantId = savedAuth
       }
     })
   } catch (error) {
-    console.error('Error fetching wallet transactions:', error)
+    console.log('Error fetching wallet transactions:', error.response.data)
   } finally {
     isLoading.value = false
   }
@@ -332,23 +323,20 @@ const tenantId = savedAuth
 const fundWallet = async () => {
   const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
 
-console.log(savedAuth);
+  console.log(savedAuth)
 
-const token = savedAuth
-  ? savedAuth?.token
-  : computed(() => authStore.token)?.value;
+  const token = savedAuth ? savedAuth?.token : computed(() => authStore.token)?.value
 
-const tenantId = savedAuth
-  ? savedAuth.user?.business_name
-    ? savedAuth.user?.id
-    : savedAuth.user?.tenant_id
-  : computed(() =>
-      authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id
-    )?.value;
+  const tenantId = savedAuth
+    ? savedAuth.user?.business_name
+      ? savedAuth.user?.id
+      : savedAuth.user?.tenant_id
+    : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
+        ?.value
 
   const loading = ref(false)
 
-  if (!amount.value || amount.value < 500000) {
+  if (!form.amount || form.amount < 500000) {
     ElNotification({
       title: 'Invalid Amount',
       message: 'Minimum funding amount is ₦500,000.',
@@ -359,8 +347,8 @@ const tenantId = savedAuth
   }
 
   const API_URL = `https://dev02201.getjupita.com/api/${tenantId}/initialize-payment`
-  console.log('fund wallet amount:', amount.value)
-  console.log('fund wallet token:', token)
+  console.log('fund wallet formatted amount:', formattedAmount.value)
+  console.log('fund wallet  amount:', form.amount)
 
   try {
     fundWalletDialog.value = false
@@ -372,7 +360,7 @@ const tenantId = savedAuth
     })
     const response = await axios.post(
       API_URL,
-      { amount: amount.value },
+      { amount: form.amount },
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -380,15 +368,14 @@ const tenantId = savedAuth
         }
       }
     )
-
     console.log(response)
-
+    form.amount = ''
     paymentLink.value = response.data.data.link
     paymentModal.value = true
     fundWalletDialog.value = false
     fetchWallet()
   } catch (error) {
-    console.error('Funding error:', error)
+    console.log('Funding error:', error.response.data)
     fundWalletDialog.value = false
 
     ElNotification({
@@ -409,7 +396,6 @@ const onIframeLoad = () => {
 onMounted(async () => {
   fetchWallet()
   fetchWalletTransactions()
-  
 })
 </script>
 

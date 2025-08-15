@@ -131,8 +131,8 @@ const enquiryReasonIndividual = ref('')
 const bvnIndividual = ref('')
 const consentIndividual = ref(false)
 const reportOptionsIndividual = ref([
-  { label: 'First Central', value: 'fcbc', checked: true },
-  { label: 'Credit Registry', value: 'credit_registry', checked: true }
+  { label: 'First Central', value: 'fcbc', checked: false },
+  { label: 'Credit Registry', value: 'credit_registry', checked: false }
 ])
 
 // Company
@@ -141,8 +141,8 @@ const rcNumber = ref('')
 const businessName = ref('')
 const consentCompany = ref(false)
 const reportOptionsCompany = ref([
-  { label: 'First Central', value: 'first_central', checked: true },
-  { label: 'Credit Registry', value: 'credit_registry', checked: true }
+  { label: 'First Central', value: 'first_central', checked: false },
+  { label: 'Credit Registry', value: 'credit_registry', checked: false }
 ])
 
 const fireConfetti = () => {
@@ -391,9 +391,7 @@ onMounted(() => {
     <div class="p-4 rounded shadow-sm bg-white m-4">
       <!-- Header with Title and New credit search Button -->
       <div class="bg-white flex justify-between items-center border-b p-2">
-         
         <div class="mb-2">
-          
           <h1 class="text-xl font-bold mt-4">Credit Search</h1>
           <p class="text-gray-500 text-sm mt-1">View and Manage your credit search</p>
         </div>
@@ -458,12 +456,12 @@ onMounted(() => {
 
       <div v-else-if="creditStatements.length > 0" class="overflow-x-auto">
         <table class="min-w-full">
-          <thead class="font-semibold uppercase text-sm leading-normal">
+          <thead class="font-semibold uppercase text-xs leading-normal">
             <tr>
               <th class="py-3 px-6 text-left">S/N</th>
               <th class="py-3 px-6 text-left">ID</th>
               <th class="py-3 px-6 text-left">Created Date</th>
-              <th class="py-3 px-6 text-left">Report Type</th>
+              <th class="py-3 px-3 text-left">Report Type</th>
               <th class="py-3 px-6 text-left">Bureau Name</th>
               <th class="py-3 px-6 text-left">Status</th>
               <th class="py-3 px-6 text-center">Action</th>

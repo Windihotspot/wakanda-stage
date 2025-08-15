@@ -67,6 +67,26 @@ function formatNaira(value) {
     minimumFractionDigits: 2
   }).format(isNaN(cleaned) ? 0 : cleaned)
 }
+function formatCurrency(amount) {
+  console.log("Raw amount:", amount, "Type:", typeof amount);
+
+  // Ensure it's a number before formatting
+  const numericAmount = Number(amount);
+
+  if (isNaN(numericAmount)) {
+    console.warn("⚠️ formatNaira: Value is not a valid number:", amount);
+    return amount; // return original if invalid
+  }
+
+  const formatted = new Intl.NumberFormat("en-NG", {
+    style: "currency",
+    currency: "NGN",
+    minimumFractionDigits: 2
+  }).format(numericAmount);
+
+  console.log("Formatted amount:", formatted);
+  return formatted;
+}
 
 function getStatusColor(status) {
   if (!status || status.trim() === '') return 'grey'
@@ -621,7 +641,7 @@ const fetchCreditReport = async (creditReportId) => {
           uid: `${account.Account_No || 'acc'}-${index}`,
           lender: account.CreditorName,
           date: moment(account.Date_Opened).format('DD/MM/YYYY'),
-          amount: account.Credit_Limit || 0,
+          amount:formatCurrency(account.Credit_Limit || 0),
           balance: account.Balance || 0,
           status: account.Account_Status || 'Performing',
           raw: account,
@@ -1084,7 +1104,7 @@ function getDotColor(status) {
                 <div>
                   <p class="mb-1">Total active monthly installment</p>
                   <p class="font-bold text-gray-900">
-                    {{ summary.TotalMonthlyInstalment || 0.0 }}
+                    {{ formatNaira(summary.TotalMonthlyInstalment  || 0.0) }}
                   </p>
                 </div>
                 <div>
@@ -1104,7 +1124,7 @@ function getDotColor(status) {
                 <div>
                   <p class="mb-1">Total outstanding debts</p>
                   <p class="font-bold text-gray-900">
-                    {{ summary.TotalOutstandingdebt || 0.0 }}
+                    {{formatNaira(summary.TotalOutstandingdebt)  || 0.0 }}
                   </p>
                 </div>
                 <div>
@@ -1525,10 +1545,10 @@ function getDotColor(status) {
                           Account number: <strong>{{ displayValue(item.accountNo) }}</strong>
                         </p>
                         <p>
-                          Loan Amount: <strong>{{ item.amount || 0 }}</strong>
+                          Loan Amount: <strong>{{ formatCurrency(item.amount || 0) }}</strong>
                         </p>
                         <p>
-                          Current Balance: <strong>{{ item.balance || 0 }}</strong>
+                          Current Balance: <strong>{{ formatNaira(item.balance) || 0 }}</strong>
                         </p>
                         <p>
                           Amount Overdue: <strong>{{ item.overdue || 0 }}</strong>
@@ -1740,7 +1760,7 @@ function getDotColor(status) {
                           Account number: <strong>{{ displayValue(item.accountNo) }}</strong>
                         </p>
                         <p>
-                          Loan Amount: <strong>₦{{ item.amount?.toLocaleString() || '0' }}</strong>
+                          Loan Amount: <strong>{{ formatCurrency(item.amount || '0') }}</strong>
                         </p>
                         <p>
                           Current Balance:

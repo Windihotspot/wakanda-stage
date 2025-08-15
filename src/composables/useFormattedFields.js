@@ -1,7 +1,7 @@
 // /composables/useFormattedField.js
 import { computed } from 'vue'
 
-export function useFormattedField(target, key, options = { currency: false }) {
+export function useFormattedFields(target, key, options = { currency: false }) {
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('en-NG', {
       style: 'currency',

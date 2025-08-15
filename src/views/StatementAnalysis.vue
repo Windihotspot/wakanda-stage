@@ -12,12 +12,25 @@
         </div>
       </template>
 
-      <div v-else-if="status === 'FAILED'" class="text-center flex flex-col align-center mx-auto my-auto justify-center h-screen">
+      <div
+        v-else-if="status === 'FAILED' || status === 'ALTERED'"
+        class="relative flex flex-col items-center justify-center h-screen text-center"
+      >
+        <!-- Back Button at Top Left -->
+        <RouterLink to="/dashboard" class="absolute top-4 left-4">
+          <button class="flex items-center text-black text-lg font-normal">
+            <i class="fas fa-circle-arrow-left mr-2 text-xl" style="color: #2563eb"></i>
+            Back
+          </button>
+        </RouterLink>
+
+        <!-- Centered Content -->
         <img src="../assets/Error Fall Down.png" alt="Failed" class="mx-auto h-48" />
-        <p class=" mt-4">
+        <p class="mt-4">
           There was an error during file processing. Jupita will work promptly to resolve this
-          issue. <br> If you have any further questions, please don't hesitate to
-          <a href="" class="text-[#1f5aa3]">Contact Us..</a>
+          issue. <br />
+          If you have any further questions, please don't hesitate to
+          <a href="mailto:hello@getjupita.com" class="text-[#1f5aa3]">Contact Us..</a>
         </p>
       </div>
 
@@ -629,7 +642,7 @@
 
                         <v-select
                           v-model="selectedStatus"
-                          :items="['CREDIT', 'DEBIT']"
+                          :items="['all', 'credit', 'debit']"
                           color="[#1f5aa3]"
                           label="Status"
                           density="compact"
@@ -659,15 +672,36 @@
                     </div>
 
                     <el-date-picker
-                      v-model="dateRange"
-                      type="daterange"
-                      range-separator="to"
-                      start-placeholder="Start date"
-                      end-placeholder="End date"
+                      v-model="startDate"
+                      type="date"
+                      placeholder="Start date"
                       class="w-20 m-2"
                       size="small"
-                    ></el-date-picker>
+                    />
 
+                    <el-date-picker
+                      v-model="endDate"
+                      type="date"
+                      placeholder="End date"
+                      class="w-20 m-2"
+                      size="small"
+                    />
+                    <div class="flex m-2 gap-4">
+                       <v-btn size="small" color="primary" variant="flat" @click="filterTransactions">
+                      Apply
+                    </v-btn>
+                    <!-- Clear Button -->
+                    <v-btn
+                      size="small"
+                      color="error"
+                      variant="outlined"
+                      @click="clearDateRange"
+                      :disabled="!startDate && !endDate"
+                    >
+                      Clear
+                    </v-btn>
+                    </div>
+                   
                     <div v-loading="transactionLoading" class="relative min-h-[200px]">
                       <v-table class="min-w-full text-sm pa-2">
                         <thead class="font-semibold bg-gray-100">
@@ -754,6 +788,8 @@ const status = route.params.status
 console.log('statement status:', status)
 
 const activeTab = ref('Summary')
+const startDate = ref(null) // ✅ define startDate
+const endDate = ref(null)
 
 const formatDate = (date) => {
   if (!date) return 'N/A' // or any placeholder you prefer
@@ -1142,6 +1178,24 @@ const fetchAnalysisResult = async (analysisId) => {
       }
     ]
 
+    // Move Total Expenses aside
+    const totalItem = expenseItems.value.find((item) => item.label === 'Total Expenses')
+
+    // Filter out Total Expenses from sorting
+    let sortedItems = expenseItems.value
+      .filter((item) => item.label !== 'Total Expenses')
+      .sort((a, b) => {
+        // First sort by monthly (desc)
+        if (b.monthly !== a.monthly) {
+          return b.monthly - a.monthly
+        }
+        // Then sort by total (desc) if monthly is the same
+        return b.total - a.total
+      })
+
+    // Add Total Expenses back at the end
+    expenseItems.value = [...sortedItems, totalItem]
+
     // Use turnover values directly
     totalDebits.value = cashFlow?.totalDebitTurnOver || 0
     totalCredits.value = cashFlow?.totalCreditTurnover || 0
@@ -1330,29 +1384,35 @@ const fetchTransactions = async (id) => {
 
 const searchQuery = ref('')
 const selectedStatus = ref(null)
-const dateRange = ref([])
 
 const transactionLoading = ref(false)
 
-watch([searchQuery, selectedStatus, dateRange, allTransactions], async () => {
+const filterTransactions = async () => {
   transactionLoading.value = true
   await nextTick()
 
   let filtered = allTransactions.value
   const query = searchQuery.value?.toLowerCase().trim()
 
+  // Search filter
   if (query) {
     filtered = filtered.filter((txn) =>
       Object.values(txn).some((value) => value?.toString().toLowerCase().includes(query))
     )
   }
 
-  if (selectedStatus.value) {
-    filtered = filtered.filter((txn) => txn.type === selectedStatus.value)
+  // Status filter
+  if (selectedStatus.value && selectedStatus.value !== 'all') {
+    filtered = filtered.filter(
+      (txn) => txn.type?.toLowerCase() === selectedStatus.value.toLowerCase()
+    )
   }
 
-  if (dateRange.value && dateRange.value.length === 2) {
-    const [start, end] = dateRange.value.map((d) => new Date(d).getTime())
+  // Date range filter
+  if (startDate.value && endDate.value) {
+    const start = new Date(startDate.value).getTime()
+    const end = new Date(endDate.value).getTime()
+
     filtered = filtered.filter((txn) => {
       const txnDate = new Date(txn.date).getTime()
       return txnDate >= start && txnDate <= end
@@ -1361,11 +1421,20 @@ watch([searchQuery, selectedStatus, dateRange, allTransactions], async () => {
 
   transactions.value = filtered
 
-  // Optional: Simulate loading delay for better UX
+  // Simulate small loading delay
   await new Promise((r) => setTimeout(r, 300))
 
   transactionLoading.value = false
-})
+}
+
+const clearDateRange = () => {
+  startDate.value = null
+  endDate.value = null
+  filterTransactions()
+}
+
+// Trigger filter automatically when search or status changes
+watch([searchQuery, selectedStatus], filterTransactions)
 
 const resetFilters = () => {
   filters.value = {
