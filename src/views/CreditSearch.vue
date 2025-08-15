@@ -194,8 +194,7 @@ const fetchCreditChecks = async () => {
     : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
         ?.value
 
-  const API_URL = `${import.meta.env.VITE_API_BASE_URL}
-/api/${tenantId}/fetch-existing-credit-checks`
+  const API_URL = `${import.meta.env.VITE_API_BASE_URL}/api/${tenantId}/fetch-existing-credit-checks`
   isLoading.value = true
 
   try {
@@ -226,10 +225,11 @@ const submitIndividualForm = async () => {
     : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
         ?.value
 
-  const API_URL = `${import.meta.env.VITE_API_BASE_URL}
-/api/${tenant_id}/check-credit-history`
+  const API_URL = `${import.meta.env.VITE_API_BASE_URL}/api/${tenant_id}/check-credit-history`
   const isValid = await individualForm.value?.validate()
   if (!isValid) return
+  // ⏱ Track frontend start time
+  const frontendStart = performance.now()
   try {
     loading.value = true
     const selectedServices = reportOptionsIndividual.value
@@ -245,7 +245,8 @@ const submitIndividualForm = async () => {
       refresh: true,
       services: selectedServices
     }
-
+    // ⏱ Track API call start time
+    const apiStart = performance.now()
     console.log('Sending credit check request payload:', payload)
 
     const response = await Axios.post(API_URL, payload, {
@@ -254,11 +255,18 @@ const submitIndividualForm = async () => {
         'Content-Type': 'application/json'
       }
     })
-
+    // ⏱ API round-trip time
+    const apiEnd = performance.now()
+    const apiTimeSeconds = ((apiEnd - apiStart) / 1000).toFixed(2)
+    // ⏱ Full frontend processing time
+    const frontendEnd = performance.now()
+    const frontendTimeSeconds = ((frontendEnd - frontendStart) / 1000).toFixed(2)
+    console.log(`Full processing time: ${frontendTimeSeconds} seconds`)
+    console.log(`API round-trip time: ${apiTimeSeconds} seconds`)
     console.log('Credit check response:', response.data)
     ElNotification({
       title: 'Success',
-      message: 'Credit search successful!',
+      message: `Credit search successful! (API: ${apiTimeSeconds}s)`,
       type: 'success',
       position: 'top-right',
       showClose: true
@@ -297,11 +305,11 @@ const submitCompanyForm = async () => {
     : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
         ?.value
 
-  const API_URL = `${import.meta.env.VITE_API_BASE_URL}
-/api/${tenant_id}/check-credit-history`
+  const API_URL = `${import.meta.env.VITE_API_BASE_URL}/api/${tenant_id}/check-credit-history`
 
   const isValid = await companyForm.value.validate()
   if (!isValid) return
+  const frontendStart = performance.now()
   try {
     loading.value = true
     const payload = {
@@ -312,7 +320,8 @@ const submitCompanyForm = async () => {
       refresh: true,
       services: selectedServices
     }
-
+    // ⏱ Track API call start time
+    const apiStart = performance.now()
     console.log('Sending credit check request payload:', payload)
 
     const response = await Axios.post(API_URL, payload, {
@@ -322,6 +331,14 @@ const submitCompanyForm = async () => {
       }
     })
 
+    // ⏱ API round-trip time
+    const apiEnd = performance.now()
+    const apiTimeSeconds = ((apiEnd - apiStart) / 1000).toFixed(2)
+    // ⏱ Full frontend processing time
+    const frontendEnd = performance.now()
+    const frontendTimeSeconds = ((frontendEnd - frontendStart) / 1000).toFixed(2)
+    console.log(`Full processing time: ${frontendTimeSeconds} seconds`)
+    console.log(`API round-trip time: ${apiTimeSeconds} seconds`)
     console.log('Credit check response:', response.data)
     ElNotification({
       title: 'Success',
@@ -612,15 +629,14 @@ onMounted(() => {
                   </div>
 
                   <div
-                    style="height: 500px"
                     v-if="loading"
-                    class="absolute mt-6 inset-0 bg-white bg-opacity-90 flex flex-col items-center justify-center z-50 p-6 space-y-4 rounded-lg"
+                    class="absolute inset-0 bg-white rounded-lg shadow-2xl bg-opacity-90 flex flex-col items-center justify-center z-50 p-8 space-y-6"
                   >
-                    <img src="/src/assets/relax.png" class="w-28 mb-2 object-contain" alt="" />
+                    <img src="/src/assets/relax.png" class="w-60 h-50 mb-4" alt="" />
                     <p class="text-md font-semibold text-center">
                       🧘Please sit and relax while we process your credit search…
                     </p>
-                    <v-progress-circular indeterminate color="blue" size="36" />
+                    <v-progress-circular indeterminate color="blue" size="48" />
                   </div>
 
                   <!-- Consent Checkbox -->
@@ -700,7 +716,7 @@ onMounted(() => {
                     v-if="loading"
                     class="absolute inset-0 bg-white rounded-lg shadow-2xl bg-opacity-90 flex flex-col items-center justify-center z-50 p-8 space-y-6"
                   >
-                    <img src="/src/assets/relax.png" class="w-35 h-50 mb-4" alt="" />
+                    <img src="/src/assets/relax.png" class="w-60 h-50 mb-4" alt="" />
                     <p class="text-md font-semibold text-center">
                       🧘Please sit and relax while we process your credit search…
                     </p>

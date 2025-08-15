@@ -323,8 +323,6 @@ const fetchWalletTransactions = async () => {
 const fundWallet = async () => {
   const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
 
-  console.log(savedAuth)
-
   const token = savedAuth ? savedAuth?.token : computed(() => authStore.token)?.value
 
   const tenantId = savedAuth
@@ -348,16 +346,20 @@ const fundWallet = async () => {
 
   const API_URL = `https://dev02201.getjupita.com/api/${tenantId}/initialize-payment`
   console.log('fund wallet formatted amount:', formattedAmount.value)
-  console.log('fund wallet  amount:', form.amount)
+  console.log('fund wallet amount:', form.amount)
+
+  loading.value = true
 
   try {
     fundWalletDialog.value = false
+
     ElNotification({
       title: 'Payment Initialized',
       message: 'Redirecting to payment link...',
       type: 'success',
       duration: 4000
     })
+
     const response = await axios.post(
       API_URL,
       { amount: form.amount },
@@ -368,19 +370,41 @@ const fundWallet = async () => {
         }
       }
     )
+
     console.log(response)
     form.amount = ''
     paymentLink.value = response.data.data.link
     paymentModal.value = true
-    fundWalletDialog.value = false
     fetchWallet()
   } catch (error) {
-    console.log('Funding error:', error.response.data)
-    fundWalletDialog.value = false
+    console.log('Funding error raw:', error?.response?.data)
+
+    const rawError = error?.response?.data?.data?.error
+    let cleanMessage = 'Failed to initiate payment. Please try again.'
+
+    if (rawError) {
+      // Find the JSON part by locating the first '{'
+      const jsonStart = rawError.indexOf('{')
+      if (jsonStart !== -1) {
+        const jsonString = rawError.slice(jsonStart)
+        try {
+          const parsed = JSON.parse(jsonString)
+
+          // Combine available error details
+          const parts = [parsed?.message, parsed?.meta?.nextStep, parsed?.code].filter(Boolean)
+
+          if (parts.length) {
+            cleanMessage = parts.join(', ')
+          }
+        } catch (parseErr) {
+          console.error('Error parsing Paystack error JSON:', parseErr)
+        }
+      }
+    }
 
     ElNotification({
       title: 'Payment Failed',
-      message: error?.response?.data?.message || 'Failed to initiate payment. Please try again.',
+      message: cleanMessage,
       type: 'error',
       duration: 5000
     })
