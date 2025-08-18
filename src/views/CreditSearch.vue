@@ -312,6 +312,11 @@ const submitCompanyForm = async () => {
   const frontendStart = performance.now()
   try {
     loading.value = true
+    const selectedServices = reportOptionsCompany.value
+      .filter((option) => option.checked)
+      .map((option) => option.value)
+
+    console.log('✅ Selected services:', selectedServices)
     const payload = {
       businessName: businessName,
       id_type: 'business',
