@@ -141,7 +141,7 @@ const rcNumber = ref('')
 const businessName = ref('')
 const consentCompany = ref(false)
 const reportOptionsCompany = ref([
-  { label: 'First Central', value: 'first_central', checked: false },
+  { label: 'First Central', value: 'fcbc', checked: false },
   { label: 'Credit Registry', value: 'credit_registry', checked: false }
 ])
 
