@@ -318,7 +318,6 @@ const submitCompanyForm = async () => {
 
     console.log('✅ Selected services:', selectedServices)
     const payload = {
-      businessName: businessName,
       id_type: 'business',
       id_string: rcNumber.value,
       purpose: enquiryReasonCompany.value,
