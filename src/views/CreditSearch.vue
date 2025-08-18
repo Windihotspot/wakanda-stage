@@ -266,7 +266,7 @@ const submitIndividualForm = async () => {
     console.log('Credit check response:', response.data)
     ElNotification({
       title: 'Success',
-      message: `Credit search successful! (API: ${apiTimeSeconds}s)`,
+      message: `Credit search successful! (API ROUND TRIP: ${apiTimeSeconds}s)`,
       type: 'success',
       position: 'top-right',
       showClose: true
