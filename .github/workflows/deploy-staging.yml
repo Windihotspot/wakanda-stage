@@ -21,10 +21,6 @@ jobs:
       - name: Install and Build
         run: |
           npm ci
-          # Use staging env if available
-          if [ -f ".env.staging" ]; then
-            cp .env.staging .env
-          fi
           npm run build
           echo "==== Built files in dist/ ===="
           ls -la dist
