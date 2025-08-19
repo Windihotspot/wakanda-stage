@@ -27,6 +27,7 @@ const submitForm = async () => {
   loginForm.value.errors = {} // Clear previous errors
 
   try {
+    console.log('Base URL:', import.meta.env.VITE_API_BASE_URL);
     const response = await axios.post(
       `${import.meta.env.VITE_API_BASE_URL}/api/login`,
       {
@@ -34,7 +35,7 @@ const submitForm = async () => {
         password: loginForm.value.password
       }
     )
-
+      console.log("login remember me:", loginForm.value.remember)
     console.log('Login successful:', response.data)
     // Extract data from the response properly
     const { token, user, verification_status } = response.data.data

@@ -2,7 +2,7 @@
   <MainLayout>
     <div class="p-2">
       <template v-if="loading">
-        <div class="flex items-center justify-center h-96">
+        <div class="flex items-center justify-center h-screen">
           <v-progress-circular
             :size="100"
             :width="10"
@@ -11,6 +11,29 @@
           ></v-progress-circular>
         </div>
       </template>
+
+      <div
+        v-else-if="status === 'FAILED' || status === 'ALTERED'"
+        class="relative flex flex-col items-center justify-center h-screen text-center"
+      >
+        <!-- Back Button at Top Left -->
+        <RouterLink to="/dashboard" class="absolute top-4 left-4">
+          <button class="flex items-center text-black text-lg font-normal">
+            <i class="fas fa-circle-arrow-left mr-2 text-xl" style="color: #2563eb"></i>
+            Back
+          </button>
+        </RouterLink>
+
+        <!-- Centered Content -->
+        <img src="../assets/Error Fall Down.png" alt="Failed" class="mx-auto h-48" />
+        <p class="mt-4">
+          There was an error during file processing. Jupita will work promptly to resolve this
+          issue. <br />
+          If you have any further questions, please don't hesitate to
+          <a href="mailto:hello@getjupita.com" class="text-[#1f5aa3]">Contact Us..</a>
+        </p>
+      </div>
+
       <template v-else>
         <div class="p-2 md:p-8">
           <RouterLink to="/dashboard">
@@ -619,7 +642,7 @@
 
                         <v-select
                           v-model="selectedStatus"
-                          :items="['CREDIT', 'DEBIT']"
+                          :items="['all', 'credit', 'debit']"
                           color="[#1f5aa3]"
                           label="Status"
                           density="compact"
@@ -649,14 +672,40 @@
                     </div>
 
                     <el-date-picker
-                      v-model="dateRange"
-                      type="daterange"
-                      range-separator="to"
-                      start-placeholder="Start date"
-                      end-placeholder="End date"
+                      v-model="startDate"
+                      type="date"
+                      placeholder="Start date"
                       class="w-20 m-2"
                       size="small"
-                    ></el-date-picker>
+                    />
+
+                    <el-date-picker
+                      v-model="endDate"
+                      type="date"
+                      placeholder="End date"
+                      class="w-20 m-2"
+                      size="small"
+                    />
+                    <div class="flex m-2 gap-4">
+                      <v-btn
+                        size="small"
+                        color="primary"
+                        variant="flat"
+                        @click="filterTransactions"
+                      >
+                        Apply
+                      </v-btn>
+                      <!-- Clear Button -->
+                      <v-btn
+                        size="small"
+                        color="error"
+                        variant="outlined"
+                        @click="clearDateRange"
+                        :disabled="!startDate && !endDate"
+                      >
+                        Clear
+                      </v-btn>
+                    </div>
 
                     <div v-loading="transactionLoading" class="relative min-h-[200px]">
                       <v-table class="min-w-full text-sm pa-2">
@@ -738,8 +787,14 @@ import MainLayout from '@/layouts/full/MainLayout.vue'
 import moment from 'moment'
 import { ElMessage, ElNotification } from 'element-plus'
 import { saveAs } from 'file-saver'
+const route = useRoute()
+const analysisId = route.params.id
+const status = route.params.status
+console.log('statement status:', status)
 
 const activeTab = ref('Summary')
+const startDate = ref(null) // ✅ define startDate
+const endDate = ref(null)
 
 const formatDate = (date) => {
   if (!date) return 'N/A' // or any placeholder you prefer
@@ -763,7 +818,6 @@ const salary = [
   // Repeat for as many rows as needed...
 ]
 const rowsPerPage = ref(15)
-const route = useRoute()
 const authStore = useAuthStore()
 
 const result = ref(null)
@@ -859,7 +913,7 @@ const transactions = ref([])
 const allTransactions = ref([])
 const income = ref({})
 const statementType = ref(null)
-
+const statementStatus = ref(null)
 
 // Function to format the balance range (e.g., "1000 - 100000")
 const formatBalanceRange = () => {
@@ -879,19 +933,16 @@ const formatBalanceRange = () => {
 const fetchAnalysisResult = async (analysisId) => {
   const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
 
-console.log(savedAuth);
+  console.log(savedAuth)
 
-const token = savedAuth
-  ? savedAuth?.token
-  : computed(() => authStore.token)?.value;
+  const token = savedAuth ? savedAuth?.token : computed(() => authStore.token)?.value
 
-const tenantId = savedAuth
-  ? savedAuth.user?.business_name
-    ? savedAuth.user?.id
-    : savedAuth.user?.tenant_id
-  : computed(() =>
-      authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id
-    )?.value;
+  const tenantId = savedAuth
+    ? savedAuth.user?.business_name
+      ? savedAuth.user?.id
+      : savedAuth.user?.tenant_id
+    : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
+        ?.value
 
   const apiUrl = `${import.meta.env.VITE_API_BASE_URL}
 /api/${tenantId}/get-analysis-result?analysis_id=${analysisId}`
@@ -1027,22 +1078,22 @@ const tenantId = savedAuth
       {
         label: 'Rent',
         monthly: spend.averageMonthlySpendOnRent ?? 0,
-        total: spend.totalSpendOnRent ?? 0,
+        total: spend.totalSpendOnRent ?? 0
       },
       {
         label: 'Hospitality and Food',
         monthly: spend.averageMonthlySpendOnHospitalityAndFood ?? 0,
-        total: spend.totalSpendOnHospitalityAndFood ?? 0,
+        total: spend.totalSpendOnHospitalityAndFood ?? 0
       },
       {
         label: 'Transportation',
         monthly: spend.averageMonthlySpendOnTransportation ?? 0,
-        total: spend.totalSpendOnTransportation ?? 0,
+        total: spend.totalSpendOnTransportation ?? 0
       },
       {
         label: 'Utilities',
         monthly: spend.averageMonthlySpendOnUtilities ?? 0,
-        total: spend.totalSpendOnUtilities ?? 0,
+        total: spend.totalSpendOnUtilities ?? 0
       },
       {
         label: 'Charges and Stamp Duty',
@@ -1131,6 +1182,24 @@ const tenantId = savedAuth
         total: spend.totalExpenses ?? 0
       }
     ]
+
+    // Move Total Expenses aside
+    const totalItem = expenseItems.value.find((item) => item.label === 'Total Expenses')
+
+    // Filter out Total Expenses from sorting
+    let sortedItems = expenseItems.value
+      .filter((item) => item.label !== 'Total Expenses')
+      .sort((a, b) => {
+        // First sort by monthly (desc)
+        if (b.monthly !== a.monthly) {
+          return b.monthly - a.monthly
+        }
+        // Then sort by total (desc) if monthly is the same
+        return b.total - a.total
+      })
+
+    // Add Total Expenses back at the end
+    expenseItems.value = [...sortedItems, totalItem]
 
     // Use turnover values directly
     totalDebits.value = cashFlow?.totalDebitTurnOver || 0
@@ -1282,25 +1351,21 @@ const inflowOutflowStatus = computed(() => {
   return 'neutral'
 })
 
-
 const isConsumer = computed(() => statementType.value === 'CONSUMER')
 
 const fetchTransactions = async (id) => {
   const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
 
-console.log(savedAuth);
+  console.log(savedAuth)
 
-const token = savedAuth
-  ? savedAuth?.token
-  : computed(() => authStore.token)?.value;
+  const token = savedAuth ? savedAuth?.token : computed(() => authStore.token)?.value
 
-const tenantId = savedAuth
-  ? savedAuth.user?.business_name
-    ? savedAuth.user?.id
-    : savedAuth.user?.tenant_id
-  : computed(() =>
-      authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id
-    )?.value;
+  const tenantId = savedAuth
+    ? savedAuth.user?.business_name
+      ? savedAuth.user?.id
+      : savedAuth.user?.tenant_id
+    : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
+        ?.value
 
   const analysisId = route.params.id
 
@@ -1324,29 +1389,35 @@ const tenantId = savedAuth
 
 const searchQuery = ref('')
 const selectedStatus = ref(null)
-const dateRange = ref([])
 
 const transactionLoading = ref(false)
 
-watch([searchQuery, selectedStatus, dateRange, allTransactions], async () => {
+const filterTransactions = async () => {
   transactionLoading.value = true
   await nextTick()
 
   let filtered = allTransactions.value
   const query = searchQuery.value?.toLowerCase().trim()
 
+  // Search filter
   if (query) {
     filtered = filtered.filter((txn) =>
       Object.values(txn).some((value) => value?.toString().toLowerCase().includes(query))
     )
   }
 
-  if (selectedStatus.value) {
-    filtered = filtered.filter((txn) => txn.type === selectedStatus.value)
+  // Status filter
+  if (selectedStatus.value && selectedStatus.value !== 'all') {
+    filtered = filtered.filter(
+      (txn) => txn.type?.toLowerCase() === selectedStatus.value.toLowerCase()
+    )
   }
 
-  if (dateRange.value && dateRange.value.length === 2) {
-    const [start, end] = dateRange.value.map((d) => new Date(d).getTime())
+  // Date range filter
+  if (startDate.value && endDate.value) {
+    const start = new Date(startDate.value).getTime()
+    const end = new Date(endDate.value).getTime()
+
     filtered = filtered.filter((txn) => {
       const txnDate = new Date(txn.date).getTime()
       return txnDate >= start && txnDate <= end
@@ -1355,11 +1426,20 @@ watch([searchQuery, selectedStatus, dateRange, allTransactions], async () => {
 
   transactions.value = filtered
 
-  // Optional: Simulate loading delay for better UX
+  // Simulate small loading delay
   await new Promise((r) => setTimeout(r, 300))
 
   transactionLoading.value = false
-})
+}
+
+const clearDateRange = () => {
+  startDate.value = null
+  endDate.value = null
+  filterTransactions()
+}
+
+// Trigger filter automatically when search or status changes
+watch([searchQuery, selectedStatus], filterTransactions)
 
 const resetFilters = () => {
   filters.value = {
@@ -1404,19 +1484,16 @@ onMounted(() => {
 const downloadAnalysis = async () => {
   const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
 
-console.log(savedAuth);
+  console.log(savedAuth)
 
-const token = savedAuth
-  ? savedAuth?.token
-  : computed(() => authStore.token)?.value;
+  const token = savedAuth ? savedAuth?.token : computed(() => authStore.token)?.value
 
-const tenantId = savedAuth
-  ? savedAuth.user?.business_name
-    ? savedAuth.user?.id
-    : savedAuth.user?.tenant_id
-  : computed(() =>
-      authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id
-    )?.value;
+  const tenantId = savedAuth
+    ? savedAuth.user?.business_name
+      ? savedAuth.user?.id
+      : savedAuth.user?.tenant_id
+    : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
+        ?.value
 
   const analysisId = route.params.id
 
@@ -1447,8 +1524,12 @@ const tenantId = savedAuth
     const fileUrl = download.document_url
 
     // Sanitize and create filename from clientName
-    const baseName = 'analysis_report'
-    const correctFileName = `${baseName}.pdf`
+    // Sanitize clientName for file name
+    const safeClientName = clientName.value
+      .replace(/\s+/g, '_') // replace spaces with underscores
+      .replace(/[^a-zA-Z0-9_-]/g, '') // remove invalid filename characters
+
+    const correctFileName = `${safeClientName || 'analysis_report'}.pdf`
 
     // Download blob
     const fileBlobResponse = await Axios.get(fileUrl, {

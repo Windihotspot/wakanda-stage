@@ -30,19 +30,14 @@ const closeModal = () => {
 const fetchStatements = async () => {
   const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
 
-console.log(savedAuth);
+  const token = savedAuth ? savedAuth?.token : computed(() => authStore.token)?.value
 
-const token = savedAuth
-  ? savedAuth?.token
-  : computed(() => authStore.token)?.value;
-
-const tenantId = savedAuth
-  ? savedAuth.user?.business_name
-    ? savedAuth.user?.id
-    : savedAuth.user?.tenant_id
-  : computed(() =>
-      authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id
-    )?.value;
+  const tenantId = savedAuth
+    ? savedAuth.user?.business_name
+      ? savedAuth.user?.id
+      : savedAuth.user?.tenant_id
+    : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
+        ?.value
 
   const API_URL = `${import.meta.env.VITE_API_BASE_URL}
 /api/${tenantId}/fetch-tenant-analyses`
@@ -121,15 +116,17 @@ const fetchAnalysisResult = async (analysisId) => {
   }
 }
 // Navigate to analysis page
-const goToAnalysis = (analysisId) => {
-  router.push({ name: 'StatementAnalysis', params: { id: analysisId } })
+const goToAnalysis = (analysisId, status) => {
+  router.push({
+    name: 'StatementAnalysis',
+    params: { id: analysisId, status }
+  })
 }
 
 // Fetch on mounted
 onMounted(() => {
   fetchStatements()
 })
-
 </script>
 
 <template>
@@ -202,7 +199,7 @@ onMounted(() => {
 
       <div v-else-if="statements.length > 0" class="overflow-x-auto">
         <table class="min-w-full">
-          <thead class="font-semibold uppercase text-sm leading-normal">
+          <thead class="font-semibold uppercase text-xs leading-normal">
             <tr>
               <th class="py-3 px-6 text-left">S/N</th>
 
@@ -237,7 +234,7 @@ onMounted(() => {
               </td>
               <td class="py-3 px-6 text-center">
                 <span
-                  @click="goToAnalysis(doc.id)"
+                  @click="goToAnalysis(doc.id, doc.status)"
                   class="bg-[#1f5aa3] text-white px-4 py-1 rounded hover:bg-blue-600 cursor-pointer"
                 >
                   View

@@ -9,8 +9,9 @@ import ResetPassword from '@/views/ResetPassword.vue'
 import PasswordReset from '@/views/PasswordReset.vue'
 import CreditSearch from '@/views/CreditSearch.vue'
 import CreditReport from '@/views/CreditReport.vue'
-import ApplicationsView from '@/views/ApplicationsView.vue'
 import SiteDown from '@/views/SiteDown.vue'
+import Applications from '@/views/Applications.vue'
+import LoanForm from '@/views/LoanForm.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -65,7 +66,7 @@ const router = createRouter({
     {
       path: '/applications',
       name: 'applications',
-      component: ApplicationsView
+      component: Applications
     },
     {
       path: '/sitedown',
@@ -73,7 +74,12 @@ const router = createRouter({
       component: SiteDown
     },
     {
-      path: '/credit-report/:unique_key',
+      path: '/loan-form',
+      name: 'loan-form',
+      component: LoanForm
+    },
+    {
+      path: '/credit-report/:unique_key/:hitRecord?',
       name: 'CreditReport',
       component: () => import('@/views/CreditReport.vue'),
       props: true
@@ -82,8 +88,24 @@ const router = createRouter({
       path: '/acceptinvite',
       name: 'acceptinvite',
       component: () => import('@/views/AcceptInviteSuccess.vue')
+    },
+    {
+      path: '/analysis/:id/:status?',
+      name: 'StatementAnalysis',
+      component: () => import('@/views/StatementAnalysis.vue'),
+      props: true
     }
   ]
 })
 
+router.beforeEach((to, from, next) => {
+  const isAuthenticated = !!localStorage.getItem('data')
+  const publicPages = ['/', '/signup', '/resetpassword', '/passwordreset', '/acceptinvite']
+
+  if (!isAuthenticated && !publicPages.includes(to.path)) {
+    return next('/')
+  }
+
+  next()
+})
 export default router

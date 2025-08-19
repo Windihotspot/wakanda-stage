@@ -3,6 +3,8 @@ import { ref, computed, onMounted, watch } from 'vue'
 import MainLayout from '@/layouts/full/MainLayout.vue'
 import moment from 'moment'
 import Axios from 'axios'
+import { useAuthStore } from '@/stores/auth'
+const authStore = useAuthStore()
 import { useRouter } from 'vue-router'
 const router = useRouter()
 import { ElLoading, ElNotification } from 'element-plus'
@@ -129,9 +131,8 @@ const enquiryReasonIndividual = ref('')
 const bvnIndividual = ref('')
 const consentIndividual = ref(false)
 const reportOptionsIndividual = ref([
-  { label: 'First Central', value: 'first_central', checked: true },
-  { label: 'Credit Registry', value: 'credit_registry', checked: true },
- 
+  { label: 'First Central', value: 'fcbc', checked: false },
+  { label: 'Credit Registry', value: 'credit_registry', checked: false }
 ])
 
 // Company
@@ -140,8 +141,8 @@ const rcNumber = ref('')
 const businessName = ref('')
 const consentCompany = ref(false)
 const reportOptionsCompany = ref([
-  { label: 'First Central', value: 'first_central', checked: true },
-  { label: 'Credit Registry', value: 'credit_registry', checked: true },
+  { label: 'First Central', value: 'fcbc', checked: false },
+  { label: 'Credit Registry', value: 'credit_registry', checked: false }
 ])
 
 const fireConfetti = () => {
@@ -184,7 +185,6 @@ const resetCompanyForm = () => {
 const fetchCreditChecks = async () => {
   const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
 
-
   const token = savedAuth ? savedAuth?.token : computed(() => authStore.token)?.value
 
   const tenantId = savedAuth
@@ -194,8 +194,7 @@ const fetchCreditChecks = async () => {
     : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
         ?.value
 
-  const API_URL = `${import.meta.env.VITE_API_BASE_URL}
-/api/${tenantId}/fetch-existing-credit-checks`
+  const API_URL = `${import.meta.env.VITE_API_BASE_URL}/api/${tenantId}/fetch-existing-credit-checks`
   isLoading.value = true
 
   try {
@@ -217,7 +216,6 @@ const individualForm = ref()
 const submitIndividualForm = async () => {
   const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
 
-
   const token = savedAuth ? savedAuth?.token : computed(() => authStore.token)?.value
 
   const tenant_id = savedAuth
@@ -227,20 +225,28 @@ const submitIndividualForm = async () => {
     : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
         ?.value
 
-  const API_URL = `${import.meta.env.VITE_API_BASE_URL}
-/api/${tenant_id}/check-credit-history`
+  const API_URL = `${import.meta.env.VITE_API_BASE_URL}/api/${tenant_id}/check-credit-history`
   const isValid = await individualForm.value?.validate()
   if (!isValid) return
+  // ⏱ Track frontend start time
+  const frontendStart = performance.now()
   try {
     loading.value = true
+    const selectedServices = reportOptionsIndividual.value
+      .filter((option) => option.checked)
+      .map((option) => option.value)
+
+    console.log('✅ Selected services:', selectedServices)
+
     const payload = {
       id_type: 'individual',
       id_string: bvnIndividual.value,
       purpose: enquiryReasonIndividual.value,
       refresh: true,
-      services: ['credit_registry', 'fcbc']
+      services: selectedServices
     }
-
+    // ⏱ Track API call start time
+    const apiStart = performance.now()
     console.log('Sending credit check request payload:', payload)
 
     const response = await Axios.post(API_URL, payload, {
@@ -249,7 +255,14 @@ const submitIndividualForm = async () => {
         'Content-Type': 'application/json'
       }
     })
-
+    // ⏱ API round-trip time
+    const apiEnd = performance.now()
+    const apiTimeSeconds = ((apiEnd - apiStart) / 1000).toFixed(2)
+    // ⏱ Full frontend processing time
+    const frontendEnd = performance.now()
+    const frontendTimeSeconds = ((frontendEnd - frontendStart) / 1000).toFixed(2)
+    console.log(`Full processing time: ${frontendTimeSeconds} seconds`)
+    console.log(`API round-trip time: ${apiTimeSeconds} seconds`)
     console.log('Credit check response:', response.data)
     ElNotification({
       title: 'Success',
@@ -283,7 +296,6 @@ const companyForm = ref()
 const submitCompanyForm = async () => {
   const savedAuth = localStorage.getItem('data') ? JSON.parse(localStorage.getItem('data')) : null
 
-
   const token = savedAuth ? savedAuth?.token : computed(() => authStore.token)?.value
 
   const tenant_id = savedAuth
@@ -293,21 +305,27 @@ const submitCompanyForm = async () => {
     : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
         ?.value
 
-  const API_URL = `${import.meta.env.VITE_API_BASE_URL}
-/api/${tenant_id}/check-credit-history`
+  const API_URL = `${import.meta.env.VITE_API_BASE_URL}/api/${tenant_id}/check-credit-history`
 
   const isValid = await companyForm.value.validate()
   if (!isValid) return
+  const frontendStart = performance.now()
   try {
     loading.value = true
+    const selectedServices = reportOptionsCompany.value
+      .filter((option) => option.checked)
+      .map((option) => option.value)
+
+    console.log('✅ Selected services:', selectedServices)
     const payload = {
       id_type: 'business',
       id_string: rcNumber.value,
       purpose: enquiryReasonCompany.value,
       refresh: true,
-      services: ['credit_registry', 'fcbc']
+      services: selectedServices
     }
-
+    // ⏱ Track API call start time
+    const apiStart = performance.now()
     console.log('Sending credit check request payload:', payload)
 
     const response = await Axios.post(API_URL, payload, {
@@ -317,6 +335,14 @@ const submitCompanyForm = async () => {
       }
     })
 
+    // ⏱ API round-trip time
+    const apiEnd = performance.now()
+    const apiTimeSeconds = ((apiEnd - apiStart) / 1000).toFixed(2)
+    // ⏱ Full frontend processing time
+    const frontendEnd = performance.now()
+    const frontendTimeSeconds = ((frontendEnd - frontendStart) / 1000).toFixed(2)
+    console.log(`Full processing time: ${frontendTimeSeconds} seconds`)
+    console.log(`API round-trip time: ${apiTimeSeconds} seconds`)
     console.log('Credit check response:', response.data)
     ElNotification({
       title: 'Success',
@@ -353,8 +379,8 @@ const submitCompanyForm = async () => {
 }
 
 // Navigate to credit report page
-const goToReport = (creditReportId) => {
-  router.push({ name: 'CreditReport', params: { unique_key: creditReportId } })
+const goToReport = (creditReportId, hitRecord) => {
+  router.push({ name: 'CreditReport', params: { unique_key: creditReportId, hitRecord } })
 }
 
 watch([searchQuery, selectedStatus], () => {
@@ -387,7 +413,7 @@ onMounted(() => {
       <!-- Header with Title and New credit search Button -->
       <div class="bg-white flex justify-between items-center border-b p-2">
         <div class="mb-2">
-          <h1 class="text-xl font-bold">Credit Search</h1>
+          <h1 class="text-xl font-bold mt-4">Credit Search</h1>
           <p class="text-gray-500 text-sm mt-1">View and Manage your credit search</p>
         </div>
 
@@ -451,12 +477,12 @@ onMounted(() => {
 
       <div v-else-if="creditStatements.length > 0" class="overflow-x-auto">
         <table class="min-w-full">
-          <thead class="font-semibold uppercase text-sm leading-normal">
+          <thead class="font-semibold uppercase text-xs leading-normal">
             <tr>
               <th class="py-3 px-6 text-left">S/N</th>
               <th class="py-3 px-6 text-left">ID</th>
               <th class="py-3 px-6 text-left">Created Date</th>
-              <th class="py-3 px-6 text-left">Report Type</th>
+              <th class="py-3 px-3 text-left">Report Type</th>
               <th class="py-3 px-6 text-left">Bureau Name</th>
               <th class="py-3 px-6 text-left">Status</th>
               <th class="py-3 px-6 text-center">Action</th>
@@ -504,7 +530,7 @@ onMounted(() => {
               </td>
               <td class="py-3 px-6 text-center">
                 <span
-                  @click="goToReport(credit.unique_key)"
+                  @click="goToReport(credit.unique_key, hitRecord)"
                   class="bg-[#1f5aa3] text-white px-4 py-1 rounded hover:bg-blue-600 cursor-pointer"
                 >
                   View
@@ -607,19 +633,14 @@ onMounted(() => {
                   </div>
 
                   <div
-                   style="height: 500px"
                     v-if="loading"
-                    class="absolute mt-6 inset-0 bg-white bg-opacity-90 flex flex-col items-center justify-center z-50 p-6 space-y-4 rounded-lg"
+                    class="absolute inset-0 bg-white rounded-lg shadow-2xl bg-opacity-90 flex flex-col items-center justify-center z-50 p-8 space-y-6"
                   >
-                    <img
-                      src="/src/assets/relax.png"
-                      class="w-28 mb-2 object-contain"
-                      alt=""
-                    />
+                    <img src="/src/assets/relax.png" class="w-60 h-50 mb-4" alt="" />
                     <p class="text-md font-semibold text-center">
                       🧘Please sit and relax while we process your credit search…
                     </p>
-                    <v-progress-circular indeterminate color="blue" size="36" />
+                    <v-progress-circular indeterminate color="blue" size="48" />
                   </div>
 
                   <!-- Consent Checkbox -->
@@ -699,7 +720,7 @@ onMounted(() => {
                     v-if="loading"
                     class="absolute inset-0 bg-white rounded-lg shadow-2xl bg-opacity-90 flex flex-col items-center justify-center z-50 p-8 space-y-6"
                   >
-                    <img src="/src/assets/relax.png" class="w-35 h-50 mb-4" alt="" />
+                    <img src="/src/assets/relax.png" class="w-60 h-50 mb-4" alt="" />
                     <p class="text-md font-semibold text-center">
                       🧘Please sit and relax while we process your credit search…
                     </p>

@@ -9,11 +9,11 @@ export default [
   //   icon: 'fa-solid fa-database', 
   //   path: '/applications'
   // },
-  {
-    title: 'Credit Search',
-    icon: 'fa-solid fa-chart-line', 
-    path: '/credit-search'
-  },
+  // {
+  //   title: 'Credit Search',
+  //   icon: 'fa-solid fa-chart-line', 
+  //   path: '/credit-search'
+  // },
   {
     title: 'Wallet',
     icon: 'fa-solid fa-wallet', 
