@@ -1,4 +1,4 @@
-=name: Deploy Staging
+name: Deploy Staging
 
 on:
   push:
@@ -21,17 +21,15 @@ jobs:
       - name: Install and Build
         run: |
           npm ci
-          # If you have .env.staging committed:
+          # Use staging env if available
           if [ -f ".env.staging" ]; then
             cp .env.staging .env
           fi
           npm run build
-          ls -la dist   # Debug: confirm dist has files
-        env:
-          # Uncomment and use these if you prefer GitHub Secrets instead of committing .env.staging
-          # VITE_API_URL: ${{ secrets.VITE_API_URL_STAGING }}
-          # VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL_STAGING }}
-          # VITE_SUPABASE_KEY: ${{ secrets.VITE_SUPABASE_KEY_STAGING }}
+          echo "==== Built files in dist/ ===="
+          ls -la dist
+          echo "==== Preview index.html ===="
+          head -n 20 dist/index.html
 
       - name: Deploy to gh-pages-staging
         uses: peaceiris/actions-gh-pages@v3
@@ -41,3 +39,4 @@ jobs:
           publish_branch: gh-pages-staging
           publish_dir: ./dist
           cname: staging.app.getjupita.com
+          force_orphan: true
