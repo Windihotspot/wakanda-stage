@@ -1,4 +1,4 @@
-name: Deploy Staging
+=name: Deploy Staging
 
 on:
   push:
@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout source repo
         uses: actions/checkout@v3
 
       - name: Setup Node
@@ -21,15 +21,23 @@ jobs:
       - name: Install and Build
         run: |
           npm ci
-          cp .env.staging .env
+          # If you have .env.staging committed:
+          if [ -f ".env.staging" ]; then
+            cp .env.staging .env
+          fi
           npm run build
-          echo 'staging.app.getjupita.com' > dist/CNAME
+          ls -la dist   # Debug: confirm dist has files
+        env:
+          # Uncomment and use these if you prefer GitHub Secrets instead of committing .env.staging
+          # VITE_API_URL: ${{ secrets.VITE_API_URL_STAGING }}
+          # VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL_STAGING }}
+          # VITE_SUPABASE_KEY: ${{ secrets.VITE_SUPABASE_KEY_STAGING }}
 
       - name: Deploy to gh-pages-staging
         uses: peaceiris/actions-gh-pages@v3
         with:
           personal_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           external_repository: Windihotspot/wakanda
-          publish_branch: staging
+          publish_branch: gh-pages-staging
           publish_dir: ./dist
           cname: staging.app.getjupita.com
