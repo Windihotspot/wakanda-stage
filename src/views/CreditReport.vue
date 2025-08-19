@@ -10,7 +10,7 @@ import { useAuthStore } from '@/stores/auth'
 const authStore = useAuthStore()
 import moment from 'moment'
 import CreditReportExport from '@/components/CreditReportExport.vue'
-
+const hitRecord = route.params.hitRecord === 'true'
 const tabs = [
   { key: 'first_central', label: 'First Central' },
   { key: 'credit_registry', label: 'Credit Registry' }
@@ -68,24 +68,24 @@ function formatNaira(value) {
   }).format(isNaN(cleaned) ? 0 : cleaned)
 }
 function formatCurrency(amount) {
-  console.log("Raw amount:", amount, "Type:", typeof amount);
+  console.log('Raw amount:', amount, 'Type:', typeof amount)
 
   // Ensure it's a number before formatting
-  const numericAmount = Number(amount);
+  const numericAmount = Number(amount)
 
   if (isNaN(numericAmount)) {
-    console.warn("⚠️ formatNaira: Value is not a valid number:", amount);
-    return amount; // return original if invalid
+    console.warn('⚠️ formatNaira: Value is not a valid number:', amount)
+    return amount // return original if invalid
   }
 
-  const formatted = new Intl.NumberFormat("en-NG", {
-    style: "currency",
-    currency: "NGN",
+  const formatted = new Intl.NumberFormat('en-NG', {
+    style: 'currency',
+    currency: 'NGN',
     minimumFractionDigits: 2
-  }).format(numericAmount);
+  }).format(numericAmount)
 
-  console.log("Formatted amount:", formatted);
-  return formatted;
+  console.log('Formatted amount:', formatted)
+  return formatted
 }
 
 function getStatusColor(status) {
@@ -641,7 +641,7 @@ const fetchCreditReport = async (creditReportId) => {
           uid: `${account.Account_No || 'acc'}-${index}`,
           lender: account.CreditorName,
           date: moment(account.Date_Opened).format('DD/MM/YYYY'),
-          amount:formatCurrency(account.Credit_Limit || 0),
+          amount: formatCurrency(account.Credit_Limit || 0),
           balance: account.Balance || 0,
           status: account.Account_Status || 'Performing',
           raw: account,
@@ -919,1161 +919,1187 @@ function getDotColor(status) {
 
 <template>
   <MainLayout>
-    <RouterLink to="/credit-search">
-      <button class="m-2 flex items-center text-black text-lg font-normal">
-        <i class="fas fa-circle-arrow-left mr-2 text-xl" style="color: #2563eb"></i> Back
-      </button>
-    </RouterLink>
-
-    <div class="mt- 4 flex justify-between items-center p-2">
-      <!-- Tabs -->
-      <div class="flex space-x-4">
-        <button
-          v-for="tab in tabs"
-          :key="tab.key"
-          @click="activeTab = tab.key"
-          :class="activeTab === tab.key ? 'bg-blue-600 text-white' : 'bg-white text-black'"
-          class="px-4 py-2 rounded transition text-sm"
-        >
-          {{ tab.label }}
-        </button>
-      </div>
-
-      <!-- Export Button aligned to the right -->
-      <div>
-        <v-btn
-          @click="reportRef?.exportPDF()"
-          no-uppercase
-          size="small"
-          class="normal-case p-4 bg-blue-600 hover:bg-blue-700 text-white text-none custom-btn"
-        >
-          <i class="fas fa-download mr-2"></i>
-          Export PDF
-        </v-btn>
-      </div>
-    </div>
-
     <div class="mt-4 p-2 mx-auto space-y-6">
       <div v-if="loading" class="flex flex-col items-center justify-center min-h-[200px]">
         <v-progress-circular indeterminate color="#1f5aa3" size="80" width="8" />
         <span class="mt-2 text-gray-600 text-sm">Loading credit report</span>
       </div>
 
-      <!-- Tab Content Transition -->
-      <transition name="fade" mode="out-in">
-        <div v-if="!loading" :key="activeTab" class="space-y-6">
-          <template v-if="activeTab === 'first_central'">
-            <div v-if="idType !== 'business'">
-              <!-- // personal -->
-              <div class="bg-white p-6 rounded space-y-4">
-                <h2 class="text-md font-semibold mb-4">Personal details summary</h2>
+      <div
+        v-else-if="hitRecord"
+        class="relative flex flex-col items-center justify-center h-screen text-center"
+      >
+        <RouterLink to="/credit-search" class="absolute top-4 left-4">
+          <button class="m-2 flex items-center text-black text-lg font-normal">
+            <i class="fas fa-circle-arrow-left mr-2 text-xl" style="color: #2563eb"></i> Back
+          </button>
+        </RouterLink>
 
+        <!-- Centered Content -->
+        <p class="font-semibold">NO HIT RECORD</p>
+      </div>
+
+      <!-- Tab Content Transition -->
+      <div v-else>
+        <RouterLink to="/credit-search">
+          <button class="m-2 flex items-center text-black text-lg font-normal">
+            <i class="fas fa-circle-arrow-left mr-2 text-xl" style="color: #2563eb"></i> Back
+          </button>
+        </RouterLink>
+
+        <div class="mt- 4 flex justify-between items-center p-2">
+          <!-- Tabs -->
+          <div class="flex space-x-4">
+            <button
+              v-for="tab in tabs"
+              :key="tab.key"
+              @click="activeTab = tab.key"
+              :class="activeTab === tab.key ? 'bg-blue-600 text-white' : 'bg-white text-black'"
+              class="px-4 py-2 rounded transition text-sm"
+            >
+              {{ tab.label }}
+            </button>
+          </div>
+
+          <!-- Export Button aligned to the right -->
+          <div>
+            <v-btn
+              @click="reportRef?.exportPDF()"
+              no-uppercase
+              size="small"
+              class="normal-case p-4 bg-blue-600 hover:bg-blue-700 text-white text-none custom-btn"
+            >
+              <i class="fas fa-download mr-2"></i>
+              Export PDF
+            </v-btn>
+          </div>
+        </div>
+        <transition name="fade" mode="out-in">
+          <div v-if="!loading" :key="activeTab" class="space-y-6">
+            <template v-if="activeTab === 'first_central'">
+              <div v-if="idType !== 'business'">
+                <!-- // personal -->
+                <div class="bg-white p-6 rounded space-y-4">
+                  <h2 class="text-md font-semibold mb-4">Personal details summary</h2>
+
+                  <!-- Check if `personal` has any data -->
+                  <div
+                    v-if="personal && Object.keys(personal).length > 0"
+                    class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-6 gap-x-8 text-sm text-gray-600"
+                  >
+                    <!-- All your data fields remain unchanged here -->
+                    <div>
+                      <p class="mb-1">Last Name</p>
+                      <p class="font-bold text-gray-900">{{ personal.Surname }}</p>
+                    </div>
+                    <div>
+                      <p class="mb-1">Gender</p>
+                      <p class="font-bold text-gray-900">{{ personal.Gender }}</p>
+                    </div>
+                    <div>
+                      <p class="mb-1">Phone Number</p>
+                      <p class="font-bold text-gray-900">{{ personal.CellularNo }}</p>
+                    </div>
+                    <div>
+                      <p class="mb-1">Latest Residential Address</p>
+                      <p class="font-bold text-gray-900 leading-snug">
+                        {{ personal.ResidentialAddress1 }}
+                      </p>
+                    </div>
+                    <div>
+                      <p class="mb-1">First Name</p>
+                      <p class="font-bold text-gray-900">{{ personal.FirstName }}</p>
+                    </div>
+                    <div>
+                      <p class="mb-1">Bank Verification Number</p>
+                      <p class="font-bold text-gray-900">{{ personal.BankVerificationNo }}</p>
+                    </div>
+                    <div>
+                      <p class="mb-1">Work Telephone</p>
+                      <p class="font-bold text-gray-900">{{ personal.WorkTelephoneNo }}</p>
+                    </div>
+                    <div>
+                      <p class="mb-1">Other Names</p>
+                      <p class="font-bold text-gray-900">{{ personal.OtherNames }}</p>
+                    </div>
+                    <div>
+                      <p class="mb-1">Date of Birth</p>
+                      <p class="font-bold text-gray-900">{{ personal.BirthDate }}</p>
+                    </div>
+                    <div>
+                      <p class="mb-1">Home Telephone</p>
+                      <p class="font-bold text-gray-900">{{ personal.HomeTelephoneNo }}</p>
+                    </div>
+                  </div>
+
+                  <!-- Fallback message if no data -->
+                  <div v-else class="text-gray-500 text-sm italic">No personal data available.</div>
+                </div>
+              </div>
+
+              <div v-else>
+                <!-- BUSINESS INFORMATION SECTION -->
+                <div v-if="idType === 'business'" class="bg-white p-6 rounded space-y-4">
+                  <h2 class="text-md font-semibold">Business Information</h2>
+                  <div
+                    class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-8 text-sm text-gray-600"
+                  >
+                    <div>
+                      <p class="mb-1">Business Name</p>
+                      <p class="font-bold text-gray-900">
+                        {{ displayValue(businessData.BusinessName) }}
+                      </p>
+                    </div>
+                    <div>
+                      <p class="mb-1">Date of Incorporation</p>
+                      <p class="font-bold text-gray-900">
+                        {{ displayValue(businessData.DateOfIncorporation) }}
+                      </p>
+                    </div>
+                    <div>
+                      <p class="mb-1">Business Address</p>
+                      <p class="font-bold text-gray-900">
+                        {{ displayValue(businessData.CommercialAddress1) }},
+                        {{ displayValue(businessData.CommercialAddress2) }},
+                        {{ displayValue(businessData.CommercialAddress4) }}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- DIRECTOR INFORMATION TABLE -->
+                <div v-if="idType === 'business'" class="bg-white p-6 rounded space-y-4 mt-4">
+                  <h2 class="text-md font-semibold">Director Information</h2>
+
+                  <div v-if="directors.length > 0">
+                    <table class="min-w-full text-sm text-left">
+                      <thead class="text-xs font-semibold text-gray-700">
+                        <tr>
+                          <th class="">First Name</th>
+                          <th class="">Other Names</th>
+                          <th class="">Surname</th>
+                          <th class="">Identification Number</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="(director, index) in directors" :key="index">
+                          <td class="pt-4 font-bold text-gray-900">
+                            {{ displayValue(director.firstName) }}
+                          </td>
+                          <td class="font-bold text-gray-900">
+                            {{ displayValue(director.othernames) }}
+                          </td>
+                          <td class="font-bold text-gray-900">
+                            {{ displayValue(director.surname) }}
+                          </td>
+                          <td class="font-bold text-gray-900">
+                            {{ displayValue(director.Identificationnumber) }}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div v-else class="text-sm text-gray-500 italic">
+                    No director information available.
+                  </div>
+                </div>
+              </div>
+
+              <!-- Summary -->
+              <div class="bg-white p-6 rounded-md mt-4">
+                <h2 class="text-md font-semibold mb-6">Summary</h2>
+
+                <!-- Show data if summary object exists and is not empty -->
+                <div
+                  class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-8 text-sm text-gray-600"
+                >
+                  <!-- Row 1 -->
+                  <div>
+                    <p class="mb-1">Total active monthly installment</p>
+                    <p class="font-bold text-gray-900">
+                      {{ formatNaira(summary.TotalMonthlyInstalment || 0.0) }}
+                    </p>
+                  </div>
+                  <div>
+                    <p class="mb-1">Total no of credit facilities</p>
+                    <p class="font-bold text-gray-900">{{ summary.TotalAccounts || 0 }}</p>
+                  </div>
+                  <div>
+                    <p class="mb-1">Total no of open facilities</p>
+                    <p class="font-bold text-gray-900">{{ summary.totalOpen || 0 }}</p>
+                  </div>
+
+                  <!-- Row 2 -->
+                  <div>
+                    <p class="mb-1">Total arrear amount</p>
+                    <p class="font-bold text-gray-900">{{ summary.Amountarrear || 0.0 }}</p>
+                  </div>
+                  <div>
+                    <p class="mb-1">Total outstanding debts</p>
+                    <p class="font-bold text-gray-900">
+                      {{ formatNaira(summary.TotalOutstandingdebt) || 0.0 }}
+                    </p>
+                  </div>
+                  <div>
+                    <p class="mb-1">Total no of closed credit facilities</p>
+                    <p class="font-bold text-gray-900">{{ summary.totalClosed || 0 }}</p>
+                  </div>
+
+                  <!-- Row 3 -->
+                  <div>
+                    <p class="mb-1">Total no of account in arrears</p>
+                    <p class="font-bold text-gray-900">
+                      {{ summary.TotalAccountarrear || 0 }}
+                    </p>
+                  </div>
+                  <div>
+                    <p class="mb-1">Total no of delinquent facilities</p>
+                    <p class="font-bold text-gray-900">
+                      {{ summary.TotalaccountinBadcondition || 0 }}
+                    </p>
+                  </div>
+                  <div>
+                    <p class="mb-1">Total no written off facilities</p>
+                    <p class="font-bold text-gray-900">{{ summary.totalWrittenOff || 0 }}</p>
+                  </div>
+                </div>
+
+                <!-- Fallback if no data -->
+              </div>
+
+              <!-- Loan Accounts Table -->
+              <div class="bg-white p-6 rounded">
+                <h2 class="text-md font-semibold mb-4">Loan Accounts</h2>
+
+                <div v-if="creditAgreementSummary && creditAgreementSummary.length > 0">
+                  <v-data-table
+                    :headers="loanHeaders"
+                    :items="creditAgreementSummary"
+                    item-value="uid"
+                    :expanded.sync="expanded"
+                    class="elevation-1"
+                    fixed-header
+                    height="400"
+                    hide-default-footer
+                  >
+                    <!-- Default item row -->
+                    <template #item.status="{ item }">
+                      <v-chip
+                        :color="getStatusColor(item.status)"
+                        variant="tonal"
+                        size="small"
+                        class="text-white"
+                      >
+                        {{ item.status?.trim() || 'Unknown' }}
+                      </v-chip>
+                    </template>
+                    <template #item.action="{ item }">
+                      <v-btn size="small" color="primary" @click="toggleRow(item.uid)">
+                        {{ isExpanded(item.uid) ? 'Hide' : 'View' }}
+                      </v-btn>
+                    </template>
+
+                    <!-- Expanded content -->
+                    <template #expanded-row="{ item }">
+                      <td :colspan="loanHeaders.length" class="px-4 py-2 bg-gray-90 mb-4">
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                          <p>
+                            Account number: <strong>{{ displayValue(item.accountNo) }}</strong>
+                          </p>
+                          <p>
+                            Loan Amount: <strong>{{ item.amount || 0 }}</strong>
+                          </p>
+                          <p>
+                            Current Balance: <strong>{{ item.balance || 0 }}</strong>
+                          </p>
+                          <p>
+                            Amount Overdue: <strong>{{ item.overdue || 0 }}</strong>
+                          </p>
+                          <p>
+                            Instalment Amount: <strong>{{ item.instalment || 0 }}</strong>
+                          </p>
+                          <p>
+                            Loan Duration: <strong>{{ displayValue(item.duration) }}</strong>
+                          </p>
+                          <p>
+                            Repayment Frequency:
+                            <strong>{{ displayValue(item.repaymentFrequency) }}</strong>
+                          </p>
+                          <p>
+                            Date Account Opened: <strong>{{ displayValue(item.date) }}</strong>
+                          </p>
+                          <p>
+                            Closed Date: <strong>{{ displayValue(item.closedDate) }}</strong>
+                          </p>
+
+                          <!-- Performance Status -->
+                          <div>
+                            Performance Status <br />
+                            <div
+                              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1"
+                              :class="getChipStyle(item.performanceStatus)"
+                            >
+                              <span
+                                class="h-1.5 w-1.5 rounded-full mr-1.5"
+                                :class="getDotColor(item.performanceStatus)"
+                              ></span>
+                              <strong>{{ item.performanceStatus || 'N/A' }}</strong>
+                            </div>
+                          </div>
+
+                          <!-- Account Status -->
+                          <div>
+                            Account Status <br />
+                            <div
+                              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1"
+                              :class="getChipStyle(item.status)"
+                            >
+                              <span
+                                class="h-1.5 w-1.5 rounded-full mr-1.5"
+                                :class="getDotColor(item.status)"
+                              ></span>
+                              <strong>{{ item.status || 'N/A' }}</strong>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                    </template>
+                  </v-data-table>
+                </div>
+
+                <div v-else class="text-sm text-gray-500 italic">No loan accounts available.</div>
+              </div>
+
+              <!-- Enquiry & Employment History -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Enquiry History -->
+                <div class="bg-white rounded p-4">
+                  <h2 class="font-semibold text-md mb-4">Enquiry History</h2>
+                  <div v-if="enquiryHistory && enquiryHistory.length > 0">
+                    <table class="w-full text-sm text-left">
+                      <thead class="bg-gray-100">
+                        <tr>
+                          <th class="p-2">Lender's Name</th>
+                          <th class="p-2">Date Requested</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr
+                          v-for="(enquiry, index) in enquiryHistory"
+                          :key="index"
+                          class="border-b"
+                        >
+                          <td class="p-2">{{ enquiry.lender }}</td>
+                          <td class="p-2">{{ enquiry.date }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div v-else class="text-sm text-gray-500 italic">
+                    No enquiry history available.
+                  </div>
+                </div>
+
+                <!-- Employment History -->
+                <div class="bg-white rounded p-4">
+                  <h2 class="font-semibold text-md mb-4">Employment History</h2>
+                  <div v-if="employmentHistory && employmentHistory.length > 0">
+                    <v-data-table
+                      :headers="employmentHeaders"
+                      :items="employmentHistory"
+                      class="elevation-1"
+                      fixed-header
+                      height="200"
+                    >
+                      <template #item.date="{ item }">
+                        {{ item.date }}
+                      </template>
+                    </v-data-table>
+                  </div>
+                  <div v-else class="text-sm text-gray-500 italic">
+                    No employment history available.
+                  </div>
+                </div>
+              </div>
+
+              <!-- Address History -->
+              <div class="bg-white rounded p-4">
+                <h2 class="font-semibold text-md mb-4">Address History</h2>
+                <div v-if="addressHistory && addressHistory.length > 0">
+                  <div class="overflow-auto max-h-72 border rounded">
+                    <table class="min-w-full text-sm text-left">
+                      <thead class="bg-gray-100 sticky top-0 z-10">
+                        <tr>
+                          <th class="p-3 font-medium text-gray-700">Address</th>
+                          <th class="p-3 font-medium text-gray-700 w-40">Date Updated</th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-gray-200">
+                        <tr v-for="(address, index) in addressHistory" :key="index">
+                          <td class="p-3 text-gray-800">{{ address.address }}</td>
+                          <td class="p-3 text-gray-800 w-40">{{ address.date }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <div v-else class="text-sm text-gray-500 italic">No address history available.</div>
+              </div>
+            </template>
+
+            <template v-else-if="activeTab === 'credit_registry'">
+              <!-- Personal Details Summary -->
+              <div v-if="idType !== 'business'" class="bg-white p-6 rounded space-y-4">
+                <h2 class="text-md font-semibold mb-4">Personal details summary</h2>
                 <!-- Check if `personal` has any data -->
                 <div
-                  v-if="personal && Object.keys(personal).length > 0"
+                  v-if="
+                    creditPersonal &&
+                    Object.values(creditPersonal).some((val) => val && val.toString().trim() !== '')
+                  "
                   class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-6 gap-x-8 text-sm text-gray-600"
                 >
-                  <!-- All your data fields remain unchanged here -->
                   <div>
                     <p class="mb-1">Last Name</p>
-                    <p class="font-bold text-gray-900">{{ personal.Surname }}</p>
+                    <p class="font-bold text-gray-900">{{ creditPersonal.Surname || 'N/A' }}</p>
                   </div>
                   <div>
                     <p class="mb-1">Gender</p>
-                    <p class="font-bold text-gray-900">{{ personal.Gender }}</p>
+                    <p class="font-bold text-gray-900">{{ creditPersonal.Gender || 'N/A' }}</p>
                   </div>
                   <div>
                     <p class="mb-1">Phone Number</p>
-                    <p class="font-bold text-gray-900">{{ personal.CellularNo }}</p>
+                    <p class="font-bold text-gray-900">{{ creditPersonal.CellularNo || 'N/A' }}</p>
                   </div>
                   <div>
                     <p class="mb-1">Latest Residential Address</p>
                     <p class="font-bold text-gray-900 leading-snug">
-                      {{ personal.ResidentialAddress1 }}
+                      {{ creditPersonal?.address || 'N/A' }}
                     </p>
                   </div>
                   <div>
                     <p class="mb-1">First Name</p>
-                    <p class="font-bold text-gray-900">{{ personal.FirstName }}</p>
+                    <p class="font-bold text-gray-900">{{ creditPersonal.FirstName || 'N/A' }}</p>
                   </div>
                   <div>
                     <p class="mb-1">Bank Verification Number</p>
-                    <p class="font-bold text-gray-900">{{ personal.BankVerificationNo }}</p>
+                    <p class="font-bold text-gray-900">
+                      {{ creditPersonal.BankVerificationNo || 'N/A' }}
+                    </p>
                   </div>
                   <div>
                     <p class="mb-1">Work Telephone</p>
-                    <p class="font-bold text-gray-900">{{ personal.WorkTelephoneNo }}</p>
+                    <p class="font-bold text-gray-900">
+                      {{ creditPersonal.WorkTelephoneNo || 'N/A' }}
+                    </p>
                   </div>
                   <div>
                     <p class="mb-1">Other Names</p>
-                    <p class="font-bold text-gray-900">{{ personal.OtherNames }}</p>
+                    <p class="font-bold text-gray-900">{{ creditPersonal.OtherNames || 'N/A' }}</p>
                   </div>
                   <div>
                     <p class="mb-1">Date of Birth</p>
-                    <p class="font-bold text-gray-900">{{ personal.BirthDate }}</p>
+                    <p class="font-bold text-gray-900">{{ creditPersonal.BirthDate || 'N/A' }}</p>
                   </div>
                   <div>
                     <p class="mb-1">Home Telephone</p>
-                    <p class="font-bold text-gray-900">{{ personal.HomeTelephoneNo }}</p>
+                    <p class="font-bold text-gray-900">
+                      {{ creditPersonal.HomeTelephoneNo || 'N/A' }}
+                    </p>
                   </div>
                 </div>
 
-                <!-- Fallback message if no data -->
                 <div v-else class="text-gray-500 text-sm italic">No personal data available.</div>
               </div>
-            </div>
 
-            <div v-else>
-              <!-- BUSINESS INFORMATION SECTION -->
-              <div v-if="idType === 'business'" class="bg-white p-6 rounded space-y-4">
-                <h2 class="text-md font-semibold">Business Information</h2>
+              <div v-else>
+                <!-- BUSINESS INFORMATION SECTION -->
+                <div v-if="idType === 'business'" class="bg-white p-6 rounded space-y-4">
+                  <h2 class="text-md font-semibold">Business Information</h2>
+                  <div
+                    class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-8 text-sm text-gray-600"
+                  >
+                    <div>
+                      <p class="mb-1">Business Name</p>
+                      <p class="font-bold text-gray-900">
+                        {{ displayValue(creditRegistrybusinessName) }}
+                      </p>
+                    </div>
+                    <div>
+                      <p class="mb-1">Date of Incorporation</p>
+                      <p class="font-bold text-gray-900">N/A</p>
+                    </div>
+                    <div>
+                      <p class="mb-1">Business Address</p>
+                      <p class="font-bold text-gray-900">N/A</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- DIRECTOR INFORMATION TABLE -->
+                <div v-if="idType === 'business'" class="bg-white p-6 rounded space-y-4 mt-4">
+                  <h2 class="text-md font-semibold">Director Information</h2>
+
+                  <div v-if="creditDirectors.length > 0">
+                    <table class="min-w-full text-sm text-left">
+                      <thead class="text-xs font-semibold text-gray-700">
+                        <tr>
+                          <th class="">First Name</th>
+                          <th class="">Other Names</th>
+                          <th class="">Surname</th>
+                          <th class="">Identification Number</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="(director, index) in creditDirectors" :key="index">
+                          <td class="py-2">{{ director.firstName }}</td>
+                          <td class="py-2">{{ director.otherNames }}</td>
+                          <td class="py-2">{{ director.surname }}</td>
+                          <td class="py-2">{{ director.identificationNumber }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div v-else class="text-sm text-gray-500 italic">
+                    No director information available.
+                  </div>
+                </div>
+              </div>
+
+              <!-- Summary -->
+              <div class="bg-white p-6 rounded-md mt-4">
+                <h2 class="text-md font-semibold mb-6">Summary</h2>
+
+                <!-- Show data if summary object exists and is not empty -->
                 <div
                   class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-8 text-sm text-gray-600"
                 >
+                  <!-- Row 1 -->
                   <div>
-                    <p class="mb-1">Business Name</p>
-                    <p class="font-bold text-gray-900">
-                      {{ displayValue(businessData.BusinessName) }}
-                    </p>
+                    <p class="mb-1">Total active monthly installment</p>
+                    <p class="font-bold text-gray-900">N/A</p>
                   </div>
                   <div>
-                    <p class="mb-1">Date of Incorporation</p>
-                    <p class="font-bold text-gray-900">
-                      {{ displayValue(businessData.DateOfIncorporation) }}
-                    </p>
+                    <p class="mb-1">Total no of credit facilities</p>
+                    <p class="font-bold text-gray-900">N/A</p>
                   </div>
                   <div>
-                    <p class="mb-1">Business Address</p>
-                    <p class="font-bold text-gray-900">
-                      {{ displayValue(businessData.CommercialAddress1) }},
-                      {{ displayValue(businessData.CommercialAddress2) }},
-                      {{ displayValue(businessData.CommercialAddress4) }}
-                    </p>
+                    <p class="mb-1">Total no of open facilities</p>
+                    <p class="font-bold text-gray-900">{{ creditRegistryTotalOpen || 0 }}</p>
+                  </div>
+
+                  <!-- Row 2 -->
+                  <div>
+                    <p class="mb-1">Total arrear amount</p>
+                    <p class="font-bold text-gray-900">N/A</p>
+                  </div>
+                  <div>
+                    <p class="mb-1">Total outstanding debts</p>
+                    <p class="font-bold text-gray-900">N/A</p>
+                  </div>
+                  <div>
+                    <p class="mb-1">Total no of closed credit facilities</p>
+                    <p class="font-bold text-gray-900">{{ creditRegistryTotalClosed || 0 }}</p>
+                  </div>
+
+                  <!-- Row 3 -->
+                  <div>
+                    <p class="mb-1">Total no of account in arrears</p>
+                    <p class="font-bold text-gray-900">N/A</p>
+                  </div>
+                  <div>
+                    <p class="mb-1">Total no of delinquent facilities</p>
+                    <p class="font-bold text-gray-900">N/A</p>
+                  </div>
+                  <div>
+                    <p class="mb-1">Total no written off facilities</p>
+                    <p class="font-bold text-gray-900">{{ creditRegistryTotalWrittenOff || 0 }}</p>
                   </div>
                 </div>
+
+                <!-- Fallback if no data -->
               </div>
 
-              <!-- DIRECTOR INFORMATION TABLE -->
-              <div v-if="idType === 'business'" class="bg-white p-6 rounded space-y-4 mt-4">
-                <h2 class="text-md font-semibold">Director Information</h2>
+              <!-- Performing Accounts Table -->
+              <div class="bg-white p-6 rounded">
+                <h2 class="text-md font-semibold mb-4">Performing Accounts</h2>
 
-                <div v-if="directors.length > 0">
-                  <table class="min-w-full text-sm text-left">
-                    <thead class="text-xs font-semibold text-gray-700">
-                      <tr>
-                        <th class="">First Name</th>
-                        <th class="">Other Names</th>
-                        <th class="">Surname</th>
-                        <th class="">Identification Number</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="(director, index) in directors" :key="index">
-                        <td class="pt-4 font-bold text-gray-900">
-                          {{ displayValue(director.firstName) }}
-                        </td>
-                        <td class="font-bold text-gray-900">
-                          {{ displayValue(director.othernames) }}
-                        </td>
-                        <td class="font-bold text-gray-900">
-                          {{ displayValue(director.surname) }}
-                        </td>
-                        <td class="font-bold text-gray-900">
-                          {{ displayValue(director.Identificationnumber) }}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+                <div v-if="loanAccounts && loanAccounts.length > 0">
+                  <v-data-table
+                    :headers="loanHeaders"
+                    :items="loanAccounts"
+                    item-value="uid"
+                    :expanded.sync="expanded"
+                    show-expand
+                    fixed-header
+                    height="300"
+                    hide-default-footer
+                    class="elevation-1"
+                  >
+                    <!-- Status badge -->
+                    <template #item.status="{ item }">
+                      <v-chip
+                        :color="item.status === 'Closed' ? 'green' : 'red'"
+                        variant="tonal"
+                        size="small"
+                        class="text-white"
+                      >
+                        {{ item.status }}
+                      </v-chip>
+                    </template>
+
+                    <!-- Action button -->
+                    <template #item.action="{ item }">
+                      <v-btn size="small" color="primary" @click="toggleRow(item.uid)">
+                        {{ isExpanded(item.uid) ? 'Hide' : 'View' }}
+                      </v-btn>
+                    </template>
+
+                    <!-- Expanded row content -->
+                    <template #expanded-row="{ item }">
+                      <td :colspan="loanHeaders.length" class="px-4 py-2 bg-gray-90 mb-4">
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                          <p>
+                            Account number: <strong>{{ displayValue(item.accountNo) }}</strong>
+                          </p>
+                          <p>
+                            Loan Amount: <strong>{{ formatCurrency(item.amount || 0) }}</strong>
+                          </p>
+                          <p>
+                            Current Balance: <strong>{{ formatNaira(item.balance) || 0 }}</strong>
+                          </p>
+                          <p>
+                            Amount Overdue: <strong>{{ item.overdue || 0 }}</strong>
+                          </p>
+                          <p>
+                            Instalment Amount: <strong>{{ item.instalment || 0 }}</strong>
+                          </p>
+                          <p>
+                            Loan Duration: <strong>{{ displayValue(item.duration) }} months</strong>
+                          </p>
+                          <p>
+                            Repayment Frequency:
+                            <strong>{{ displayValue(item.repaymentFrequency) }}</strong>
+                          </p>
+                          <p>
+                            Date Account Opened: <strong>{{ displayValue(item.date) }}</strong>
+                          </p>
+                          <p>
+                            Closed Date: <strong>{{ displayValue(item.closedDate) }}</strong>
+                          </p>
+
+                          <!-- Performance Status -->
+                          <div>
+                            Performance Status <br />
+                            <div
+                              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1"
+                              :class="getChipStyle(item.performanceStatus)"
+                            >
+                              <span
+                                class="h-1.5 w-1.5 rounded-full mr-1.5"
+                                :class="getDotColor(item.performanceStatus)"
+                              ></span>
+                              <strong>{{ item.performanceStatus || 'N/A' }}</strong>
+                            </div>
+                          </div>
+
+                          <!-- Account Status -->
+                          <div>
+                            Account Status <br />
+                            <div
+                              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1"
+                              :class="getChipStyle(item.status)"
+                            >
+                              <span
+                                class="h-1.5 w-1.5 rounded-full mr-1.5"
+                                :class="getDotColor(item.status)"
+                              ></span>
+                              <strong>{{ item.status || 'N/A' }}</strong>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                    </template>
+                  </v-data-table>
+                </div>
+
+                <div v-else class="text-sm text-gray-500 italic">No loan accounts available.</div>
+              </div>
+
+              <!-- Delinquents Accounts -->
+              <div class="bg-white p-6 rounded-md shadow">
+                <h2 class="text-md font-semibold mb-4">Deliquents Accounts</h2>
+                <div v-if="delinquentAccounts && delinquentAccounts.length > 0">
+                  <v-data-table
+                    :headers="delinquentHeaders"
+                    :items="delinquentAccounts"
+                    item-value="uid"
+                    :expanded.sync="expanded"
+                    show-expand
+                    fixed-header
+                    height="300"
+                    hide-default-footer
+                    class="elevation-1"
+                  >
+                    <!-- Status badge -->
+                    <template #item.status="{ item }">
+                      <v-chip
+                        :color="item.status === 'Closed' ? 'green' : 'red'"
+                        variant="tonal"
+                        size="small"
+                        class="text-white"
+                      >
+                        {{ item.status }}
+                      </v-chip>
+                    </template>
+
+                    <!-- Action button -->
+                    <template #item.action="{ item }">
+                      <v-btn size="small" color="primary" @click="toggleRow(item.uid)">
+                        {{ isExpanded(item.uid) ? 'Hide' : 'View' }}
+                      </v-btn>
+                    </template>
+
+                    <!-- Expanded content -->
+                    <template #expanded-row="{ item }">
+                      <td :colspan="delinquentHeaders.length" class="px-4 py-2 bg-gray-90 mb-4">
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                          <p>
+                            Account number: <strong>{{ displayValue(item.accountNo) }}</strong>
+                          </p>
+                          <p>
+                            Loan Amount:
+                            <strong>₦{{ item.amount?.toLocaleString() || '0' }}</strong>
+                          </p>
+                          <p>
+                            Current Balance:
+                            <strong>₦{{ item.balance?.toLocaleString() || '0' }}</strong>
+                          </p>
+                          <p>
+                            Amount Overdue:
+                            <strong>₦{{ item.overdue?.toLocaleString() || '0' }}</strong>
+                          </p>
+                          <p>
+                            Instalment Amount:
+                            <strong>₦{{ item.instalment?.toLocaleString() || '0' }}</strong>
+                          </p>
+                          <p>
+                            Loan Duration: <strong>{{ displayValue(item.duration) }} months</strong>
+                          </p>
+                          <p>
+                            Repayment Frequency:
+                            <strong>{{ displayValue(item.repaymentFrequency) }}</strong>
+                          </p>
+                          <p>
+                            Date Account Opened: <strong>{{ displayValue(item.date) }}</strong>
+                          </p>
+                          <p>
+                            Closed Date: <strong>{{ displayValue(item.closedDate) }}</strong>
+                          </p>
+
+                          <!-- Performance Status -->
+                          <div>
+                            Performance Status <br />
+                            <div
+                              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1"
+                              :class="getChipStyle(item.performanceStatus)"
+                            >
+                              <span
+                                class="h-1.5 w-1.5 rounded-full mr-1.5"
+                                :class="getDotColor(item.performanceStatus)"
+                              ></span>
+                              <strong>{{ item.performanceStatus || 'N/A' }}</strong>
+                            </div>
+                          </div>
+
+                          <!-- Account Status -->
+                          <div>
+                            Account Status <br />
+                            <div
+                              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1"
+                              :class="getChipStyle(item.status)"
+                            >
+                              <span
+                                class="h-1.5 w-1.5 rounded-full mr-1.5"
+                                :class="getDotColor(item.status)"
+                              ></span>
+                              <strong>{{ item.status || 'N/A' }}</strong>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                    </template>
+                  </v-data-table>
                 </div>
 
                 <div v-else class="text-sm text-gray-500 italic">
-                  No director information available.
-                </div>
-              </div>
-            </div>
-
-            <!-- Summary -->
-            <div class="bg-white p-6 rounded-md mt-4">
-              <h2 class="text-md font-semibold mb-6">Summary</h2>
-
-              <!-- Show data if summary object exists and is not empty -->
-              <div
-                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-8 text-sm text-gray-600"
-              >
-                <!-- Row 1 -->
-                <div>
-                  <p class="mb-1">Total active monthly installment</p>
-                  <p class="font-bold text-gray-900">
-                    {{ formatNaira(summary.TotalMonthlyInstalment  || 0.0) }}
-                  </p>
-                </div>
-                <div>
-                  <p class="mb-1">Total no of credit facilities</p>
-                  <p class="font-bold text-gray-900">{{ summary.TotalAccounts || 0 }}</p>
-                </div>
-                <div>
-                  <p class="mb-1">Total no of open facilities</p>
-                  <p class="font-bold text-gray-900">{{ summary.totalOpen || 0 }}</p>
-                </div>
-
-                <!-- Row 2 -->
-                <div>
-                  <p class="mb-1">Total arrear amount</p>
-                  <p class="font-bold text-gray-900">{{ summary.Amountarrear || 0.0 }}</p>
-                </div>
-                <div>
-                  <p class="mb-1">Total outstanding debts</p>
-                  <p class="font-bold text-gray-900">
-                    {{formatNaira(summary.TotalOutstandingdebt)  || 0.0 }}
-                  </p>
-                </div>
-                <div>
-                  <p class="mb-1">Total no of closed credit facilities</p>
-                  <p class="font-bold text-gray-900">{{ summary.totalClosed || 0 }}</p>
-                </div>
-
-                <!-- Row 3 -->
-                <div>
-                  <p class="mb-1">Total no of account in arrears</p>
-                  <p class="font-bold text-gray-900">
-                    {{ summary.TotalAccountarrear || 0 }}
-                  </p>
-                </div>
-                <div>
-                  <p class="mb-1">Total no of delinquent facilities</p>
-                  <p class="font-bold text-gray-900">
-                    {{ summary.TotalaccountinBadcondition || 0 }}
-                  </p>
-                </div>
-                <div>
-                  <p class="mb-1">Total no written off facilities</p>
-                  <p class="font-bold text-gray-900">{{ summary.totalWrittenOff || 0 }}</p>
+                  No delinquent accounts available.
                 </div>
               </div>
 
-              <!-- Fallback if no data -->
-            </div>
-
-            <!-- Loan Accounts Table -->
-            <div class="bg-white p-6 rounded">
-              <h2 class="text-md font-semibold mb-4">Loan Accounts</h2>
-
-              <div v-if="creditAgreementSummary && creditAgreementSummary.length > 0">
-                <v-data-table
-                  :headers="loanHeaders"
-                  :items="creditAgreementSummary"
-                  item-value="uid"
-                  :expanded.sync="expanded"
-                  class="elevation-1"
-                  fixed-header
-                  height="400"
-                  hide-default-footer
-                >
-                  <!-- Default item row -->
-                  <template #item.status="{ item }">
-                    <v-chip
-                      :color="getStatusColor(item.status)"
-                      variant="tonal"
-                      size="small"
-                      class="text-white"
-                    >
-                      {{ item.status?.trim() || 'Unknown' }}
-                    </v-chip>
-                  </template>
-                  <template #item.action="{ item }">
-                    <v-btn size="small" color="primary" @click="toggleRow(item.uid)">
-                      {{ isExpanded(item.uid) ? 'Hide' : 'View' }}
-                    </v-btn>
-                  </template>
-
-                  <!-- Expanded content -->
-                  <template #expanded-row="{ item }">
-                    <td :colspan="loanHeaders.length" class="px-4 py-2 bg-gray-90 mb-4">
-                      <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                        <p>
-                          Account number: <strong>{{ displayValue(item.accountNo) }}</strong>
-                        </p>
-                        <p>
-                          Loan Amount: <strong>{{ item.amount || 0 }}</strong>
-                        </p>
-                        <p>
-                          Current Balance: <strong>{{ item.balance || 0 }}</strong>
-                        </p>
-                        <p>
-                          Amount Overdue: <strong>{{ item.overdue || 0 }}</strong>
-                        </p>
-                        <p>
-                          Instalment Amount: <strong>{{ item.instalment || 0 }}</strong>
-                        </p>
-                        <p>
-                          Loan Duration: <strong>{{ displayValue(item.duration) }}</strong>
-                        </p>
-                        <p>
-                          Repayment Frequency:
-                          <strong>{{ displayValue(item.repaymentFrequency) }}</strong>
-                        </p>
-                        <p>
-                          Date Account Opened: <strong>{{ displayValue(item.date) }}</strong>
-                        </p>
-                        <p>
-                          Closed Date: <strong>{{ displayValue(item.closedDate) }}</strong>
-                        </p>
-
-                        <!-- Performance Status -->
-                        <div>
-                          Performance Status <br />
-                          <div
-                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1"
-                            :class="getChipStyle(item.performanceStatus)"
-                          >
-                            <span
-                              class="h-1.5 w-1.5 rounded-full mr-1.5"
-                              :class="getDotColor(item.performanceStatus)"
-                            ></span>
-                            <strong>{{ item.performanceStatus || 'N/A' }}</strong>
-                          </div>
-                        </div>
-
-                        <!-- Account Status -->
-                        <div>
-                          Account Status <br />
-                          <div
-                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1"
-                            :class="getChipStyle(item.status)"
-                          >
-                            <span
-                              class="h-1.5 w-1.5 rounded-full mr-1.5"
-                              :class="getDotColor(item.status)"
-                            ></span>
-                            <strong>{{ item.status || 'N/A' }}</strong>
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                  </template>
-                </v-data-table>
-              </div>
-
-              <div v-else class="text-sm text-gray-500 italic">No loan accounts available.</div>
-            </div>
-
-            <!-- Enquiry & Employment History -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <!-- Enquiry History -->
-              <div class="bg-white rounded p-4">
-                <h2 class="font-semibold text-md mb-4">Enquiry History</h2>
-                <div v-if="enquiryHistory && enquiryHistory.length > 0">
-                  <table class="w-full text-sm text-left">
-                    <thead class="bg-gray-100">
-                      <tr>
-                        <th class="p-2">Lender's Name</th>
-                        <th class="p-2">Date Requested</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="(enquiry, index) in enquiryHistory" :key="index" class="border-b">
-                        <td class="p-2">{{ enquiry.lender }}</td>
-                        <td class="p-2">{{ enquiry.date }}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                <div v-else class="text-sm text-gray-500 italic">No enquiry history available.</div>
-              </div>
-
-              <!-- Employment History -->
-              <div class="bg-white rounded p-4">
-                <h2 class="font-semibold text-md mb-4">Employment History</h2>
-                <div v-if="employmentHistory && employmentHistory.length > 0">
+              <!-- Closed Accounts -->
+              <div class="bg-white p-6 rounded-md shadow">
+                <h2 class="text-md font-semibold mb-4">Closed Accounts</h2>
+                <div v-if="closedAccounts && closedAccounts.length > 0">
                   <v-data-table
-                    :headers="employmentHeaders"
-                    :items="employmentHistory"
-                    class="elevation-1"
+                    :headers="closedHeaders"
+                    :items="closedAccounts"
+                    item-value="uid"
+                    :expanded.sync="expanded"
+                    show-expand
                     fixed-header
-                    height="200"
+                    height="300"
+                    hide-default-footer
+                    class="elevation-1"
                   >
-                    <template #item.date="{ item }">
-                      {{ item.date }}
+                    <!-- Status badge -->
+                    <template #item.status="{ item }">
+                      <v-chip
+                        :color="item.status === 'Closed' ? 'green' : 'red'"
+                        variant="tonal"
+                        size="small"
+                        class="text-white"
+                      >
+                        {{ item.status }}
+                      </v-chip>
+                    </template>
+
+                    <!-- Action button -->
+                    <template #item.action="{ item }">
+                      <v-btn size="small" color="primary" @click="toggleRow(item.uid)">
+                        {{ isExpanded(item.uid) ? 'Hide' : 'View' }}
+                      </v-btn>
+                    </template>
+
+                    <!-- Expanded content -->
+                    <template #expanded-row="{ item }">
+                      <td :colspan="closedHeaders.length" class="px-4 py-2 bg-gray-90 mb-4">
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                          <p>
+                            Account number: <strong>{{ displayValue(item.accountNo) }}</strong>
+                          </p>
+                          <p>
+                            Loan Amount: <strong>{{ formatCurrency(item.amount || '0') }}</strong>
+                          </p>
+                          <p>
+                            Current Balance:
+                            <strong>₦{{ item.balance?.toLocaleString() || '0' }}</strong>
+                          </p>
+                          <p>
+                            Amount Overdue:
+                            <strong>₦{{ item.overdue?.toLocaleString() || '0' }}</strong>
+                          </p>
+                          <p>
+                            Instalment Amount:
+                            <strong>₦{{ item.instalment?.toLocaleString() || '0' }}</strong>
+                          </p>
+                          <p>
+                            Loan Duration: <strong>{{ displayValue(item.duration) }} months</strong>
+                          </p>
+                          <p>
+                            Repayment Frequency:
+                            <strong>{{ displayValue(item.repaymentFrequency) }}</strong>
+                          </p>
+                          <p>
+                            Date Account Opened: <strong>{{ displayValue(item.date) }}</strong>
+                          </p>
+                          <p>
+                            Closed Date: <strong>{{ displayValue(item.closedDate) }}</strong>
+                          </p>
+
+                          <!-- Performance Status -->
+                          <div>
+                            Performance Status <br />
+                            <div
+                              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1"
+                              :class="getChipStyle(item.performanceStatus)"
+                            >
+                              <span
+                                class="h-1.5 w-1.5 rounded-full mr-1.5"
+                                :class="getDotColor(item.performanceStatus)"
+                              ></span>
+                              <strong>{{ item.performanceStatus || 'N/A' }}</strong>
+                            </div>
+                          </div>
+
+                          <!-- Account Status -->
+                          <div>
+                            Account Status <br />
+                            <div
+                              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1"
+                              :class="getChipStyle(item.status)"
+                            >
+                              <span
+                                class="h-1.5 w-1.5 rounded-full mr-1.5"
+                                :class="getDotColor(item.status)"
+                              ></span>
+                              <strong>{{ item.status || 'N/A' }}</strong>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                    </template>
+                  </v-data-table>
+                </div>
+
+                <div v-else class="text-sm text-gray-500 italic">No Closed accounts available.</div>
+              </div>
+
+              <!-- Written Off Accounts -->
+              <div class="bg-white p-6 rounded mb-6">
+                <h2 class="text-md font-semibold mb-4">Written Off Accounts</h2>
+                <div v-if="writtenOffAccounts && writtenOffAccounts.length > 0">
+                  <v-data-table
+                    :headers="writtenOffHeaders"
+                    :items="writtenOffAccounts"
+                    item-value="uid"
+                    :expanded.sync="expanded"
+                    show-expand
+                    fixed-header
+                    height="300"
+                    hide-default-footer
+                    class="elevation-1"
+                  >
+                    <!-- Status badge -->
+                    <template #item.status="{ item }">
+                      <v-chip
+                        :color="item.status === 'Closed' ? 'green' : 'red'"
+                        variant="tonal"
+                        size="small"
+                        class="text-white"
+                      >
+                        {{ item.status }}
+                      </v-chip>
+                    </template>
+
+                    <!-- Action button -->
+                    <template #item.action="{ item }">
+                      <v-btn size="small" color="primary" @click="toggleRow(item.uid)">
+                        {{ isExpanded(item.uid) ? 'Hide' : 'View' }}
+                      </v-btn>
+                    </template>
+
+                    <!-- Expanded content -->
+                    <template #expanded-row="{ item }">
+                      <td :colspan="writtenOffHeaders.length" class="px-4 py-2 bg-gray-90 mb-4">
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                          <p>
+                            Account number: <strong>{{ displayValue(item.accountNo) }}</strong>
+                          </p>
+                          <p>
+                            Loan Amount:
+                            <strong>₦{{ item.amount?.toLocaleString() || '0' }}</strong>
+                          </p>
+                          <p>
+                            Current Balance:
+                            <strong>₦{{ item.balance?.toLocaleString() || '0' }}</strong>
+                          </p>
+                          <p>
+                            Amount Overdue:
+                            <strong>₦{{ item.overdue?.toLocaleString() || '0' }}</strong>
+                          </p>
+                          <p>
+                            Instalment Amount:
+                            <strong>₦{{ item.instalment?.toLocaleString() || '0' }}</strong>
+                          </p>
+                          <p>
+                            Loan Duration: <strong>{{ displayValue(item.duration) }} months</strong>
+                          </p>
+                          <p>
+                            Repayment Frequency:
+                            <strong>{{ displayValue(item.repaymentFrequency) }}</strong>
+                          </p>
+                          <p>
+                            Date Account Opened: <strong>{{ displayValue(item.date) }}</strong>
+                          </p>
+                          <p>
+                            Closed Date: <strong>{{ displayValue(item.closedDate) }}</strong>
+                          </p>
+
+                          <!-- Performance Status -->
+                          <div>
+                            Performance Status <br />
+                            <div
+                              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1"
+                              :class="getChipStyle(item.performanceStatus)"
+                            >
+                              <span
+                                class="h-1.5 w-1.5 rounded-full mr-1.5"
+                                :class="getDotColor(item.performanceStatus)"
+                              ></span>
+                              <strong>{{ item.performanceStatus || 'N/A' }}</strong>
+                            </div>
+                          </div>
+
+                          <!-- Account Status -->
+                          <div>
+                            Account Status <br />
+                            <div
+                              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1"
+                              :class="getChipStyle(item.status)"
+                            >
+                              <span
+                                class="h-1.5 w-1.5 rounded-full mr-1.5"
+                                :class="getDotColor(item.status)"
+                              ></span>
+                              <strong>{{ item.status || 'N/A' }}</strong>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
                     </template>
                   </v-data-table>
                 </div>
                 <div v-else class="text-sm text-gray-500 italic">
-                  No employment history available.
-                </div>
-              </div>
-            </div>
-
-            <!-- Address History -->
-            <div class="bg-white rounded p-4">
-              <h2 class="font-semibold text-md mb-4">Address History</h2>
-              <div v-if="addressHistory && addressHistory.length > 0">
-                <div class="overflow-auto max-h-72 border rounded">
-                  <table class="min-w-full text-sm text-left">
-                    <thead class="bg-gray-100 sticky top-0 z-10">
-                      <tr>
-                        <th class="p-3 font-medium text-gray-700">Address</th>
-                        <th class="p-3 font-medium text-gray-700 w-40">Date Updated</th>
-                      </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-200">
-                      <tr v-for="(address, index) in addressHistory" :key="index">
-                        <td class="p-3 text-gray-800">{{ address.address }}</td>
-                        <td class="p-3 text-gray-800 w-40">{{ address.date }}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-              <div v-else class="text-sm text-gray-500 italic">No address history available.</div>
-            </div>
-          </template>
-
-          <template v-else-if="activeTab === 'credit_registry'">
-            <!-- Personal Details Summary -->
-            <div v-if="idType !== 'business'" class="bg-white p-6 rounded space-y-4">
-              <h2 class="text-md font-semibold mb-4">Personal details summary</h2>
-              <!-- Check if `personal` has any data -->
-              <div
-                v-if="
-                  creditPersonal &&
-                  Object.values(creditPersonal).some((val) => val && val.toString().trim() !== '')
-                "
-                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-6 gap-x-8 text-sm text-gray-600"
-              >
-                <div>
-                  <p class="mb-1">Last Name</p>
-                  <p class="font-bold text-gray-900">{{ creditPersonal.Surname || 'N/A' }}</p>
-                </div>
-                <div>
-                  <p class="mb-1">Gender</p>
-                  <p class="font-bold text-gray-900">{{ creditPersonal.Gender || 'N/A' }}</p>
-                </div>
-                <div>
-                  <p class="mb-1">Phone Number</p>
-                  <p class="font-bold text-gray-900">{{ creditPersonal.CellularNo || 'N/A' }}</p>
-                </div>
-                <div>
-                  <p class="mb-1">Latest Residential Address</p>
-                  <p class="font-bold text-gray-900 leading-snug">
-                    {{ creditPersonal?.address || 'N/A' }}
-                  </p>
-                </div>
-                <div>
-                  <p class="mb-1">First Name</p>
-                  <p class="font-bold text-gray-900">{{ creditPersonal.FirstName || 'N/A' }}</p>
-                </div>
-                <div>
-                  <p class="mb-1">Bank Verification Number</p>
-                  <p class="font-bold text-gray-900">
-                    {{ creditPersonal.BankVerificationNo || 'N/A' }}
-                  </p>
-                </div>
-                <div>
-                  <p class="mb-1">Work Telephone</p>
-                  <p class="font-bold text-gray-900">
-                    {{ creditPersonal.WorkTelephoneNo || 'N/A' }}
-                  </p>
-                </div>
-                <div>
-                  <p class="mb-1">Other Names</p>
-                  <p class="font-bold text-gray-900">{{ creditPersonal.OtherNames || 'N/A' }}</p>
-                </div>
-                <div>
-                  <p class="mb-1">Date of Birth</p>
-                  <p class="font-bold text-gray-900">{{ creditPersonal.BirthDate || 'N/A' }}</p>
-                </div>
-                <div>
-                  <p class="mb-1">Home Telephone</p>
-                  <p class="font-bold text-gray-900">
-                    {{ creditPersonal.HomeTelephoneNo || 'N/A' }}
-                  </p>
+                  No written-off accounts available.
                 </div>
               </div>
 
-              <div v-else class="text-gray-500 text-sm italic">No personal data available.</div>
-            </div>
+              <!-- Unknown Account Status -->
+              <div class="bg-white p-6 rounded mb-6">
+                <h2 class="text-md font-semibold mb-4">Unknown Accounts Status</h2>
+                <div v-if="unknownAccounts && unknownAccounts.length > 0">
+                  <v-data-table
+                    :headers="unknownHeaders"
+                    :items="unknownAccounts"
+                    item-value="uid"
+                    :expanded.sync="expanded"
+                    show-expand
+                    fixed-header
+                    height="300"
+                    hide-default-footer
+                    class="elevation-1"
+                  >
+                    <!-- Status badge -->
+                    <template #item.status="{ item }">
+                      <v-chip
+                        :color="item.status === 'Closed' ? 'green' : 'red'"
+                        variant="tonal"
+                        size="small"
+                        class="text-white"
+                      >
+                        {{ item.status }}
+                      </v-chip>
+                    </template>
 
-            <div v-else>
-              <!-- BUSINESS INFORMATION SECTION -->
-              <div v-if="idType === 'business'" class="bg-white p-6 rounded space-y-4">
-                <h2 class="text-md font-semibold">Business Information</h2>
-                <div
-                  class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-8 text-sm text-gray-600"
-                >
-                  <div>
-                    <p class="mb-1">Business Name</p>
-                    <p class="font-bold text-gray-900">
-                      {{ displayValue(creditRegistrybusinessName) }}
-                    </p>
-                  </div>
-                  <div>
-                    <p class="mb-1">Date of Incorporation</p>
-                    <p class="font-bold text-gray-900">N/A</p>
-                  </div>
-                  <div>
-                    <p class="mb-1">Business Address</p>
-                    <p class="font-bold text-gray-900">N/A</p>
-                  </div>
+                    <!-- Action button -->
+                    <template #item.action="{ item }">
+                      <v-btn size="small" color="primary" @click="toggleRow(item.uid)">
+                        {{ isExpanded(item.uid) ? 'Hide' : 'View' }}
+                      </v-btn>
+                    </template>
+
+                    <!-- Expanded content -->
+                    <template #expanded-row="{ item }">
+                      <td :colspan="unknownHeaders.length" class="px-4 py-2 bg-gray-90 mb-4">
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+                          <p>
+                            Account number: <strong>{{ displayValue(item.accountNo) }}</strong>
+                          </p>
+                          <p>
+                            Loan Amount:
+                            <strong>₦{{ item.amount?.toLocaleString() || '0' }}</strong>
+                          </p>
+                          <p>
+                            Current Balance:
+                            <strong>₦{{ item.balance?.toLocaleString() || '0' }}</strong>
+                          </p>
+                          <p>
+                            Amount Overdue:
+                            <strong>₦{{ item.overdue?.toLocaleString() || '0' }}</strong>
+                          </p>
+                          <p>
+                            Instalment Amount:
+                            <strong>₦{{ item.instalment?.toLocaleString() || '0' }}</strong>
+                          </p>
+                          <p>
+                            Loan Duration: <strong>{{ displayValue(item.duration) }} months</strong>
+                          </p>
+                          <p>
+                            Repayment Frequency:
+                            <strong>{{ displayValue(item.repaymentFrequency) }}</strong>
+                          </p>
+                          <p>
+                            Date Account Opened: <strong>{{ displayValue(item.date) }}</strong>
+                          </p>
+                          <p>
+                            Closed Date: <strong>{{ displayValue(item.closedDate) }}</strong>
+                          </p>
+
+                          <!-- Performance Status -->
+                          <div>
+                            Performance Status <br />
+                            <div
+                              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1"
+                              :class="getChipStyle(item.performanceStatus)"
+                            >
+                              <span
+                                class="h-1.5 w-1.5 rounded-full mr-1.5"
+                                :class="getDotColor(item.performanceStatus)"
+                              ></span>
+                              <strong>{{ item.performanceStatus || 'N/A' }}</strong>
+                            </div>
+                          </div>
+
+                          <!-- Account Status -->
+                          <div>
+                            Account Status <br />
+                            <div
+                              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1"
+                              :class="getChipStyle(item.status)"
+                            >
+                              <span
+                                class="h-1.5 w-1.5 rounded-full mr-1.5"
+                                :class="getDotColor(item.status)"
+                              ></span>
+                              <strong>{{ item.status || 'N/A' }}</strong>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                    </template>
+                  </v-data-table>
+                </div>
+                <div v-else class="text-sm text-gray-500 italic">
+                  No unknown accounts available.
                 </div>
               </div>
 
-              <!-- DIRECTOR INFORMATION TABLE -->
-              <div v-if="idType === 'business'" class="bg-white p-6 rounded space-y-4 mt-4">
-                <h2 class="text-md font-semibold">Director Information</h2>
-
-                <div v-if="creditDirectors.length > 0">
-                  <table class="min-w-full text-sm text-left">
-                    <thead class="text-xs font-semibold text-gray-700">
-                      <tr>
-                        <th class="">First Name</th>
-                        <th class="">Other Names</th>
-                        <th class="">Surname</th>
-                        <th class="">Identification Number</th>
+              <!-- Inquiry History -->
+              <div class="bg-white p-6 rounded mb-6">
+                <h2 class="text-md font-semibold mb-4">Inquiry History</h2>
+                <div v-if="inquiryHistory && inquiryHistory.length > 0">
+                  <table class="min-w-full text-left">
+                    <thead>
+                      <tr class="bg-gray-100 text-sm">
+                        <th class="p-2">Subscriber Name</th>
+                        <th class="p-2">Inquiry Date</th>
+                        <th class="p-2">Contact Phone</th>
+                        <th class="p-2">Inquiry Reason</th>
                       </tr>
                     </thead>
                     <tbody>
-                      <tr v-for="(director, index) in creditDirectors" :key="index">
-                        <td class="py-2">{{ director.firstName }}</td>
-                        <td class="py-2">{{ director.otherNames }}</td>
-                        <td class="py-2">{{ director.surname }}</td>
-                        <td class="py-2">{{ director.identificationNumber }}</td>
+                      <tr
+                        v-for="(item, i) in inquiryHistory"
+                        :key="i"
+                        class="text-sm hover:bg-gray-50 transition-colors"
+                      >
+                        <td class="p-2">{{ item.subscriber }}</td>
+                        <td class="p-2">{{ item.date }}</td>
+                        <td class="p-2">{{ item.phone }}</td>
+                        <td class="p-2">{{ item.reason }}</td>
                       </tr>
                     </tbody>
                   </table>
                 </div>
-
-                <div v-else class="text-sm text-gray-500 italic">
-                  No director information available.
-                </div>
+                <div v-else class="text-sm text-gray-500 italic">No inquiries available.</div>
               </div>
-            </div>
-
-            <!-- Summary -->
-            <div class="bg-white p-6 rounded-md mt-4">
-              <h2 class="text-md font-semibold mb-6">Summary</h2>
-
-              <!-- Show data if summary object exists and is not empty -->
-              <div
-                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-8 text-sm text-gray-600"
-              >
-                <!-- Row 1 -->
-                <div>
-                  <p class="mb-1">Total active monthly installment</p>
-                  <p class="font-bold text-gray-900">N/A</p>
-                </div>
-                <div>
-                  <p class="mb-1">Total no of credit facilities</p>
-                  <p class="font-bold text-gray-900">N/A</p>
-                </div>
-                <div>
-                  <p class="mb-1">Total no of open facilities</p>
-                  <p class="font-bold text-gray-900">{{ creditRegistryTotalOpen || 0 }}</p>
-                </div>
-
-                <!-- Row 2 -->
-                <div>
-                  <p class="mb-1">Total arrear amount</p>
-                  <p class="font-bold text-gray-900">N/A</p>
-                </div>
-                <div>
-                  <p class="mb-1">Total outstanding debts</p>
-                  <p class="font-bold text-gray-900">N/A</p>
-                </div>
-                <div>
-                  <p class="mb-1">Total no of closed credit facilities</p>
-                  <p class="font-bold text-gray-900">{{ creditRegistryTotalClosed || 0 }}</p>
-                </div>
-
-                <!-- Row 3 -->
-                <div>
-                  <p class="mb-1">Total no of account in arrears</p>
-                  <p class="font-bold text-gray-900">N/A</p>
-                </div>
-                <div>
-                  <p class="mb-1">Total no of delinquent facilities</p>
-                  <p class="font-bold text-gray-900">N/A</p>
-                </div>
-                <div>
-                  <p class="mb-1">Total no written off facilities</p>
-                  <p class="font-bold text-gray-900">{{ creditRegistryTotalWrittenOff || 0 }}</p>
-                </div>
-              </div>
-
-              <!-- Fallback if no data -->
-            </div>
-
-            <!-- Performing Accounts Table -->
-            <div class="bg-white p-6 rounded">
-              <h2 class="text-md font-semibold mb-4">Performing Accounts</h2>
-
-              <div v-if="loanAccounts && loanAccounts.length > 0">
-                <v-data-table
-                  :headers="loanHeaders"
-                  :items="loanAccounts"
-                  item-value="uid"
-                  :expanded.sync="expanded"
-                  show-expand
-                  fixed-header
-                  height="300"
-                  hide-default-footer
-                  class="elevation-1"
-                >
-                  <!-- Status badge -->
-                  <template #item.status="{ item }">
-                    <v-chip
-                      :color="item.status === 'Closed' ? 'green' : 'red'"
-                      variant="tonal"
-                      size="small"
-                      class="text-white"
-                    >
-                      {{ item.status }}
-                    </v-chip>
-                  </template>
-
-                  <!-- Action button -->
-                  <template #item.action="{ item }">
-                    <v-btn size="small" color="primary" @click="toggleRow(item.uid)">
-                      {{ isExpanded(item.uid) ? 'Hide' : 'View' }}
-                    </v-btn>
-                  </template>
-
-                  <!-- Expanded row content -->
-                  <template #expanded-row="{ item }">
-                    <td :colspan="loanHeaders.length" class="px-4 py-2 bg-gray-90 mb-4">
-                      <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                        <p>
-                          Account number: <strong>{{ displayValue(item.accountNo) }}</strong>
-                        </p>
-                        <p>
-                          Loan Amount: <strong>{{ formatCurrency(item.amount || 0) }}</strong>
-                        </p>
-                        <p>
-                          Current Balance: <strong>{{ formatNaira(item.balance) || 0 }}</strong>
-                        </p>
-                        <p>
-                          Amount Overdue: <strong>{{ item.overdue || 0 }}</strong>
-                        </p>
-                        <p>
-                          Instalment Amount: <strong>{{ item.instalment || 0 }}</strong>
-                        </p>
-                        <p>
-                          Loan Duration: <strong>{{ displayValue(item.duration) }} months</strong>
-                        </p>
-                        <p>
-                          Repayment Frequency:
-                          <strong>{{ displayValue(item.repaymentFrequency) }}</strong>
-                        </p>
-                        <p>
-                          Date Account Opened: <strong>{{ displayValue(item.date) }}</strong>
-                        </p>
-                        <p>
-                          Closed Date: <strong>{{ displayValue(item.closedDate) }}</strong>
-                        </p>
-
-                        <!-- Performance Status -->
-                        <div>
-                          Performance Status <br />
-                          <div
-                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1"
-                            :class="getChipStyle(item.performanceStatus)"
-                          >
-                            <span
-                              class="h-1.5 w-1.5 rounded-full mr-1.5"
-                              :class="getDotColor(item.performanceStatus)"
-                            ></span>
-                            <strong>{{ item.performanceStatus || 'N/A' }}</strong>
-                          </div>
-                        </div>
-
-                        <!-- Account Status -->
-                        <div>
-                          Account Status <br />
-                          <div
-                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1"
-                            :class="getChipStyle(item.status)"
-                          >
-                            <span
-                              class="h-1.5 w-1.5 rounded-full mr-1.5"
-                              :class="getDotColor(item.status)"
-                            ></span>
-                            <strong>{{ item.status || 'N/A' }}</strong>
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                  </template>
-                </v-data-table>
-              </div>
-
-              <div v-else class="text-sm text-gray-500 italic">No loan accounts available.</div>
-            </div>
-
-            <!-- Delinquents Accounts -->
-            <div class="bg-white p-6 rounded-md shadow">
-              <h2 class="text-md font-semibold mb-4">Deliquents Accounts</h2>
-              <div v-if="delinquentAccounts && delinquentAccounts.length > 0">
-                <v-data-table
-                  :headers="delinquentHeaders"
-                  :items="delinquentAccounts"
-                  item-value="uid"
-                  :expanded.sync="expanded"
-                  show-expand
-                  fixed-header
-                  height="300"
-                  hide-default-footer
-                  class="elevation-1"
-                >
-                  <!-- Status badge -->
-                  <template #item.status="{ item }">
-                    <v-chip
-                      :color="item.status === 'Closed' ? 'green' : 'red'"
-                      variant="tonal"
-                      size="small"
-                      class="text-white"
-                    >
-                      {{ item.status }}
-                    </v-chip>
-                  </template>
-
-                  <!-- Action button -->
-                  <template #item.action="{ item }">
-                    <v-btn size="small" color="primary" @click="toggleRow(item.uid)">
-                      {{ isExpanded(item.uid) ? 'Hide' : 'View' }}
-                    </v-btn>
-                  </template>
-
-                  <!-- Expanded content -->
-                  <template #expanded-row="{ item }">
-                    <td :colspan="delinquentHeaders.length" class="px-4 py-2 bg-gray-90 mb-4">
-                      <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                        <p>
-                          Account number: <strong>{{ displayValue(item.accountNo) }}</strong>
-                        </p>
-                        <p>
-                          Loan Amount: <strong>₦{{ item.amount?.toLocaleString() || '0' }}</strong>
-                        </p>
-                        <p>
-                          Current Balance:
-                          <strong>₦{{ item.balance?.toLocaleString() || '0' }}</strong>
-                        </p>
-                        <p>
-                          Amount Overdue:
-                          <strong>₦{{ item.overdue?.toLocaleString() || '0' }}</strong>
-                        </p>
-                        <p>
-                          Instalment Amount:
-                          <strong>₦{{ item.instalment?.toLocaleString() || '0' }}</strong>
-                        </p>
-                        <p>
-                          Loan Duration: <strong>{{ displayValue(item.duration) }} months</strong>
-                        </p>
-                        <p>
-                          Repayment Frequency:
-                          <strong>{{ displayValue(item.repaymentFrequency) }}</strong>
-                        </p>
-                        <p>
-                          Date Account Opened: <strong>{{ displayValue(item.date) }}</strong>
-                        </p>
-                        <p>
-                          Closed Date: <strong>{{ displayValue(item.closedDate) }}</strong>
-                        </p>
-
-                        <!-- Performance Status -->
-                        <div>
-                          Performance Status <br />
-                          <div
-                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1"
-                            :class="getChipStyle(item.performanceStatus)"
-                          >
-                            <span
-                              class="h-1.5 w-1.5 rounded-full mr-1.5"
-                              :class="getDotColor(item.performanceStatus)"
-                            ></span>
-                            <strong>{{ item.performanceStatus || 'N/A' }}</strong>
-                          </div>
-                        </div>
-
-                        <!-- Account Status -->
-                        <div>
-                          Account Status <br />
-                          <div
-                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1"
-                            :class="getChipStyle(item.status)"
-                          >
-                            <span
-                              class="h-1.5 w-1.5 rounded-full mr-1.5"
-                              :class="getDotColor(item.status)"
-                            ></span>
-                            <strong>{{ item.status || 'N/A' }}</strong>
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                  </template>
-                </v-data-table>
-              </div>
-
-              <div v-else class="text-sm text-gray-500 italic">
-                No delinquent accounts available.
-              </div>
-            </div>
-
-            <!-- Closed Accounts -->
-            <div class="bg-white p-6 rounded-md shadow">
-              <h2 class="text-md font-semibold mb-4">Closed Accounts</h2>
-              <div v-if="closedAccounts && closedAccounts.length > 0">
-                <v-data-table
-                  :headers="closedHeaders"
-                  :items="closedAccounts"
-                  item-value="uid"
-                  :expanded.sync="expanded"
-                  show-expand
-                  fixed-header
-                  height="300"
-                  hide-default-footer
-                  class="elevation-1"
-                >
-                  <!-- Status badge -->
-                  <template #item.status="{ item }">
-                    <v-chip
-                      :color="item.status === 'Closed' ? 'green' : 'red'"
-                      variant="tonal"
-                      size="small"
-                      class="text-white"
-                    >
-                      {{ item.status }}
-                    </v-chip>
-                  </template>
-
-                  <!-- Action button -->
-                  <template #item.action="{ item }">
-                    <v-btn size="small" color="primary" @click="toggleRow(item.uid)">
-                      {{ isExpanded(item.uid) ? 'Hide' : 'View' }}
-                    </v-btn>
-                  </template>
-
-                  <!-- Expanded content -->
-                  <template #expanded-row="{ item }">
-                    <td :colspan="closedHeaders.length" class="px-4 py-2 bg-gray-90 mb-4">
-                      <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                        <p>
-                          Account number: <strong>{{ displayValue(item.accountNo) }}</strong>
-                        </p>
-                        <p>
-                          Loan Amount: <strong>{{ formatCurrency(item.amount || '0') }}</strong>
-                        </p>
-                        <p>
-                          Current Balance:
-                          <strong>₦{{ item.balance?.toLocaleString() || '0' }}</strong>
-                        </p>
-                        <p>
-                          Amount Overdue:
-                          <strong>₦{{ item.overdue?.toLocaleString() || '0' }}</strong>
-                        </p>
-                        <p>
-                          Instalment Amount:
-                          <strong>₦{{ item.instalment?.toLocaleString() || '0' }}</strong>
-                        </p>
-                        <p>
-                          Loan Duration: <strong>{{ displayValue(item.duration) }} months</strong>
-                        </p>
-                        <p>
-                          Repayment Frequency:
-                          <strong>{{ displayValue(item.repaymentFrequency) }}</strong>
-                        </p>
-                        <p>
-                          Date Account Opened: <strong>{{ displayValue(item.date) }}</strong>
-                        </p>
-                        <p>
-                          Closed Date: <strong>{{ displayValue(item.closedDate) }}</strong>
-                        </p>
-
-                        <!-- Performance Status -->
-                        <div>
-                          Performance Status <br />
-                          <div
-                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1"
-                            :class="getChipStyle(item.performanceStatus)"
-                          >
-                            <span
-                              class="h-1.5 w-1.5 rounded-full mr-1.5"
-                              :class="getDotColor(item.performanceStatus)"
-                            ></span>
-                            <strong>{{ item.performanceStatus || 'N/A' }}</strong>
-                          </div>
-                        </div>
-
-                        <!-- Account Status -->
-                        <div>
-                          Account Status <br />
-                          <div
-                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1"
-                            :class="getChipStyle(item.status)"
-                          >
-                            <span
-                              class="h-1.5 w-1.5 rounded-full mr-1.5"
-                              :class="getDotColor(item.status)"
-                            ></span>
-                            <strong>{{ item.status || 'N/A' }}</strong>
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                  </template>
-                </v-data-table>
-              </div>
-
-              <div v-else class="text-sm text-gray-500 italic">No Closed accounts available.</div>
-            </div>
-
-            <!-- Written Off Accounts -->
-            <div class="bg-white p-6 rounded mb-6">
-              <h2 class="text-md font-semibold mb-4">Written Off Accounts</h2>
-              <div v-if="writtenOffAccounts && writtenOffAccounts.length > 0">
-                <v-data-table
-                  :headers="writtenOffHeaders"
-                  :items="writtenOffAccounts"
-                  item-value="uid"
-                  :expanded.sync="expanded"
-                  show-expand
-                  fixed-header
-                  height="300"
-                  hide-default-footer
-                  class="elevation-1"
-                >
-                  <!-- Status badge -->
-                  <template #item.status="{ item }">
-                    <v-chip
-                      :color="item.status === 'Closed' ? 'green' : 'red'"
-                      variant="tonal"
-                      size="small"
-                      class="text-white"
-                    >
-                      {{ item.status }}
-                    </v-chip>
-                  </template>
-
-                  <!-- Action button -->
-                  <template #item.action="{ item }">
-                    <v-btn size="small" color="primary" @click="toggleRow(item.uid)">
-                      {{ isExpanded(item.uid) ? 'Hide' : 'View' }}
-                    </v-btn>
-                  </template>
-
-                  <!-- Expanded content -->
-                  <template #expanded-row="{ item }">
-                    <td :colspan="writtenOffHeaders.length" class="px-4 py-2 bg-gray-90 mb-4">
-                      <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                        <p>
-                          Account number: <strong>{{ displayValue(item.accountNo) }}</strong>
-                        </p>
-                        <p>
-                          Loan Amount: <strong>₦{{ item.amount?.toLocaleString() || '0' }}</strong>
-                        </p>
-                        <p>
-                          Current Balance:
-                          <strong>₦{{ item.balance?.toLocaleString() || '0' }}</strong>
-                        </p>
-                        <p>
-                          Amount Overdue:
-                          <strong>₦{{ item.overdue?.toLocaleString() || '0' }}</strong>
-                        </p>
-                        <p>
-                          Instalment Amount:
-                          <strong>₦{{ item.instalment?.toLocaleString() || '0' }}</strong>
-                        </p>
-                        <p>
-                          Loan Duration: <strong>{{ displayValue(item.duration) }} months</strong>
-                        </p>
-                        <p>
-                          Repayment Frequency:
-                          <strong>{{ displayValue(item.repaymentFrequency) }}</strong>
-                        </p>
-                        <p>
-                          Date Account Opened: <strong>{{ displayValue(item.date) }}</strong>
-                        </p>
-                        <p>
-                          Closed Date: <strong>{{ displayValue(item.closedDate) }}</strong>
-                        </p>
-
-                        <!-- Performance Status -->
-                        <div>
-                          Performance Status <br />
-                          <div
-                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1"
-                            :class="getChipStyle(item.performanceStatus)"
-                          >
-                            <span
-                              class="h-1.5 w-1.5 rounded-full mr-1.5"
-                              :class="getDotColor(item.performanceStatus)"
-                            ></span>
-                            <strong>{{ item.performanceStatus || 'N/A' }}</strong>
-                          </div>
-                        </div>
-
-                        <!-- Account Status -->
-                        <div>
-                          Account Status <br />
-                          <div
-                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1"
-                            :class="getChipStyle(item.status)"
-                          >
-                            <span
-                              class="h-1.5 w-1.5 rounded-full mr-1.5"
-                              :class="getDotColor(item.status)"
-                            ></span>
-                            <strong>{{ item.status || 'N/A' }}</strong>
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                  </template>
-                </v-data-table>
-              </div>
-              <div v-else class="text-sm text-gray-500 italic">
-                No written-off accounts available.
-              </div>
-            </div>
-
-            <!-- Unknown Account Status -->
-            <div class="bg-white p-6 rounded mb-6">
-              <h2 class="text-md font-semibold mb-4">Unknown Accounts Status</h2>
-              <div v-if="unknownAccounts && unknownAccounts.length > 0">
-                <v-data-table
-                  :headers="unknownHeaders"
-                  :items="unknownAccounts"
-                  item-value="uid"
-                  :expanded.sync="expanded"
-                  show-expand
-                  fixed-header
-                  height="300"
-                  hide-default-footer
-                  class="elevation-1"
-                >
-                  <!-- Status badge -->
-                  <template #item.status="{ item }">
-                    <v-chip
-                      :color="item.status === 'Closed' ? 'green' : 'red'"
-                      variant="tonal"
-                      size="small"
-                      class="text-white"
-                    >
-                      {{ item.status }}
-                    </v-chip>
-                  </template>
-
-                  <!-- Action button -->
-                  <template #item.action="{ item }">
-                    <v-btn size="small" color="primary" @click="toggleRow(item.uid)">
-                      {{ isExpanded(item.uid) ? 'Hide' : 'View' }}
-                    </v-btn>
-                  </template>
-
-                  <!-- Expanded content -->
-                  <template #expanded-row="{ item }">
-                    <td :colspan="unknownHeaders.length" class="px-4 py-2 bg-gray-90 mb-4">
-                      <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                        <p>
-                          Account number: <strong>{{ displayValue(item.accountNo) }}</strong>
-                        </p>
-                        <p>
-                          Loan Amount: <strong>₦{{ item.amount?.toLocaleString() || '0' }}</strong>
-                        </p>
-                        <p>
-                          Current Balance:
-                          <strong>₦{{ item.balance?.toLocaleString() || '0' }}</strong>
-                        </p>
-                        <p>
-                          Amount Overdue:
-                          <strong>₦{{ item.overdue?.toLocaleString() || '0' }}</strong>
-                        </p>
-                        <p>
-                          Instalment Amount:
-                          <strong>₦{{ item.instalment?.toLocaleString() || '0' }}</strong>
-                        </p>
-                        <p>
-                          Loan Duration: <strong>{{ displayValue(item.duration) }} months</strong>
-                        </p>
-                        <p>
-                          Repayment Frequency:
-                          <strong>{{ displayValue(item.repaymentFrequency) }}</strong>
-                        </p>
-                        <p>
-                          Date Account Opened: <strong>{{ displayValue(item.date) }}</strong>
-                        </p>
-                        <p>
-                          Closed Date: <strong>{{ displayValue(item.closedDate) }}</strong>
-                        </p>
-
-                        <!-- Performance Status -->
-                        <div>
-                          Performance Status <br />
-                          <div
-                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1"
-                            :class="getChipStyle(item.performanceStatus)"
-                          >
-                            <span
-                              class="h-1.5 w-1.5 rounded-full mr-1.5"
-                              :class="getDotColor(item.performanceStatus)"
-                            ></span>
-                            <strong>{{ item.performanceStatus || 'N/A' }}</strong>
-                          </div>
-                        </div>
-
-                        <!-- Account Status -->
-                        <div>
-                          Account Status <br />
-                          <div
-                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1"
-                            :class="getChipStyle(item.status)"
-                          >
-                            <span
-                              class="h-1.5 w-1.5 rounded-full mr-1.5"
-                              :class="getDotColor(item.status)"
-                            ></span>
-                            <strong>{{ item.status || 'N/A' }}</strong>
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                  </template>
-                </v-data-table>
-              </div>
-              <div v-else class="text-sm text-gray-500 italic">No unknown accounts available.</div>
-            </div>
-
-            <!-- Inquiry History -->
-            <div class="bg-white p-6 rounded mb-6">
-              <h2 class="text-md font-semibold mb-4">Inquiry History</h2>
-              <div v-if="inquiryHistory && inquiryHistory.length > 0">
-                <table class="min-w-full text-left">
-                  <thead>
-                    <tr class="bg-gray-100 text-sm">
-                      <th class="p-2">Subscriber Name</th>
-                      <th class="p-2">Inquiry Date</th>
-                      <th class="p-2">Contact Phone</th>
-                      <th class="p-2">Inquiry Reason</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      v-for="(item, i) in inquiryHistory"
-                      :key="i"
-                      class="text-sm hover:bg-gray-50 transition-colors"
-                    >
-                      <td class="p-2">{{ item.subscriber }}</td>
-                      <td class="p-2">{{ item.date }}</td>
-                      <td class="p-2">{{ item.phone }}</td>
-                      <td class="p-2">{{ item.reason }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <div v-else class="text-sm text-gray-500 italic">No inquiries available.</div>
-            </div>
-          </template>
-        </div>
-      </transition>
+            </template>
+          </div>
+        </transition>
+      </div>
     </div>
 
     <div class="hidden">

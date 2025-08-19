@@ -687,21 +687,26 @@
                       size="small"
                     />
                     <div class="flex m-2 gap-4">
-                       <v-btn size="small" color="primary" variant="flat" @click="filterTransactions">
-                      Apply
-                    </v-btn>
-                    <!-- Clear Button -->
-                    <v-btn
-                      size="small"
-                      color="error"
-                      variant="outlined"
-                      @click="clearDateRange"
-                      :disabled="!startDate && !endDate"
-                    >
-                      Clear
-                    </v-btn>
+                      <v-btn
+                        size="small"
+                        color="primary"
+                        variant="flat"
+                        @click="filterTransactions"
+                      >
+                        Apply
+                      </v-btn>
+                      <!-- Clear Button -->
+                      <v-btn
+                        size="small"
+                        color="error"
+                        variant="outlined"
+                        @click="clearDateRange"
+                        :disabled="!startDate && !endDate"
+                      >
+                        Clear
+                      </v-btn>
                     </div>
-                   
+
                     <div v-loading="transactionLoading" class="relative min-h-[200px]">
                       <v-table class="min-w-full text-sm pa-2">
                         <thead class="font-semibold bg-gray-100">
@@ -1519,8 +1524,12 @@ const downloadAnalysis = async () => {
     const fileUrl = download.document_url
 
     // Sanitize and create filename from clientName
-    const baseName = 'analysis_report'
-    const correctFileName = `${baseName}.pdf`
+    // Sanitize clientName for file name
+    const safeClientName = clientName.value
+      .replace(/\s+/g, '_') // replace spaces with underscores
+      .replace(/[^a-zA-Z0-9_-]/g, '') // remove invalid filename characters
+
+    const correctFileName = `${safeClientName || 'analysis_report'}.pdf`
 
     // Download blob
     const fileBlobResponse = await Axios.get(fileUrl, {

@@ -379,8 +379,8 @@ const submitCompanyForm = async () => {
 }
 
 // Navigate to credit report page
-const goToReport = (creditReportId) => {
-  router.push({ name: 'CreditReport', params: { unique_key: creditReportId } })
+const goToReport = (creditReportId, hitRecord) => {
+  router.push({ name: 'CreditReport', params: { unique_key: creditReportId, hitRecord } })
 }
 
 watch([searchQuery, selectedStatus], () => {
@@ -530,7 +530,7 @@ onMounted(() => {
               </td>
               <td class="py-3 px-6 text-center">
                 <span
-                  @click="goToReport(credit.unique_key)"
+                  @click="goToReport(credit.unique_key, hitRecord)"
                   class="bg-[#1f5aa3] text-white px-4 py-1 rounded hover:bg-blue-600 cursor-pointer"
                 >
                   View
