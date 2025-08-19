@@ -1,7 +1,7 @@
 <template>
   <MobileLayout>
     <div class="p-6">
-      <h1 class="text-blue-700 font-bold text-lg">Logo goes here</h1>
+      <img src="/src/assets/logo.png" alt="Logo" class="w-10 h-10 object-contain" />
       <p class="mt-2 text-gray-600 text-sm">
         Welcome to pluto. Access credit within 2 hours
       </p>

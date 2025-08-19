@@ -11,6 +11,7 @@ import CreditSearch from '@/views/CreditSearch.vue'
 import CreditReport from '@/views/CreditReport.vue'
 import SiteDown from '@/views/SiteDown.vue'
 import Applications from '@/views/Applications.vue'
+import LoanForm from '@/views/LoanForm.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -71,6 +72,11 @@ const router = createRouter({
       path: '/sitedown',
       name: 'sitedown',
       component: SiteDown
+    },
+    {
+      path: '/loan-form',
+      name: 'loan-form',
+      component: LoanForm
     },
     {
       path: '/credit-report/:unique_key/:hitRecord?',
