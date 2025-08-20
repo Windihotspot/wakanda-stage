@@ -36,7 +36,7 @@ onMounted(async () => {
         height="6"
         class="rounded-full w-64"
       />
-      <span class="text-gray-500 mt-6">Connecting to server...</span>
+      <span class="text-gray-500 mt-6">Connecting to Jupita...</span>
     </div>
 
     <!-- Show routes after check -->
