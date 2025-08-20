@@ -22,7 +22,7 @@
       <!-- Step Content -->
       <div class="flex-1 overflow-y-auto pb-6">
         <!-- Step 1 Loan information -->
-        <div v-if="step === 1">
+        <div v-if="step === 1" class="p-2">
           <h2 class="font-semibold text-lg mb-4">Loan Information</h2>
 
           <v-text-field
@@ -55,7 +55,7 @@
         </div>
 
         <!-- Step 2 Personal information -->
-        <div v-if="step === 2">
+        <div v-if="step === 2" class="p-2">
           <h2 class="font-semibold text-lg mb-4">Personal Information</h2>
 
           <v-text-field
@@ -128,7 +128,7 @@
           </div>
         </div>
         <!-- step 3 ID Validation -->
-        <div v-if="step === 3">
+        <div v-if="step === 3" class="p-2">
           <h2 class="font-semibold text-lg mb-4">ID Validation</h2>
 
           <v-text-field
@@ -152,7 +152,7 @@
         </div>
 
         <!-- step 4 Take a selfie -->
-        <div v-if="step === 4">
+        <div v-if="step === 4" class="p-2">
           <!-- Camera Section -->
           <div class="flex flex-col flex-1 justify-center items-center w-full">
             <p class="font-semibold mb-4">Take a Selfie</p>
@@ -184,12 +184,11 @@
         </div>
 
         <!-- step 5 Employment history -->
-        <div v-if="step === 5" class="px-4 py-6 space-y-4">
+        <div v-if="step === 5" class="p-2">
           <h2 class="font-semibold text-lg">Employment Information</h2>
 
           <!-- Employer Name -->
           <v-text-field
-            v-model="form.employerName"
             label="Employer Name"
             placeholder="enter employer name"
             variant="outlined"
@@ -198,7 +197,6 @@
 
           <!-- Employment Type -->
           <v-select
-            v-model="form.employmentType"
             :items="employmentTypes"
             label="Employment Type"
             placeholder="select employment type"
@@ -208,7 +206,6 @@
 
           <!-- Company Sector -->
           <v-select
-            v-model="form.companySector"
             :items="companySectors"
             label="Company Sector"
             placeholder="select company sector"
@@ -218,7 +215,6 @@
 
           <!-- Employment Start Date -->
           <v-text-field
-            v-model="form.startDate"
             label="Employment Start Date"
             type="date"
             variant="outlined"
@@ -227,7 +223,6 @@
 
           <!-- Designation -->
           <v-text-field
-            v-model="form.designation"
             label="Designation"
             placeholder="enter designation"
             variant="outlined"
@@ -236,7 +231,6 @@
 
           <!-- Net Income -->
           <v-text-field
-            v-model="form.netIncome"
             label="Net Income"
             placeholder="enter net income"
             type="number"
@@ -247,7 +241,6 @@
 
           <!-- Work Email -->
           <v-text-field
-            v-model="form.workEmail"
             label="Work email"
             placeholder="enter work email"
             type="email"
@@ -257,7 +250,6 @@
 
           <!-- Employer Address -->
           <v-text-field
-            v-model="form.employerAddress"
             label="Employer Address"
             placeholder="enter employer address"
             variant="outlined"
@@ -284,12 +276,131 @@
             />
           </div>
         </div>
+
+        <!-- Upload documents -->
+        <div v-if="step === 6" class="p-2">
+          <!-- Upload Document Section -->
+          <h2 class="text-lg font-semibold">Upload Document</h2>
+
+          <!-- Document Types -->
+          <div v-for="doc in documents" :key="doc.key" class="space-y-2">
+            <p class="font-medium">{{ doc.label }}</p>
+
+            <!-- If file is uploaded -->
+            <div
+              v-if="doc.file"
+              class="flex items-center justify-between border rounded-lg p-3 shadow-sm"
+            >
+              <div class="flex items-center space-x-3">
+                <!-- PDF Icon -->
+                <i class="fa-solid fa-file-pdf text-red-600 text-3xl"></i>
+                <div>
+                  <p class="text-xs font-medium">{{ doc.file.name }}</p>
+                  <p class="text-xs text-gray-500">{{ doc.file.size }}MB</p>
+                </div>
+              </div>
+              <!-- Remove Icon -->
+              <i
+                class="fa-solid fa-circle-xmark text-gray-400 hover:text-red-500 cursor-pointer text-xl"
+                @click="removeFile(doc.key)"
+              ></i>
+            </div>
+
+            <!-- If no file uploaded -->
+            <label
+              v-else
+              class="flex flex-col items-center justify-center border-2 border-dashed border-blue-400 rounded-lg p-6 cursor-pointer hover:bg-blue-50 transition"
+            >
+              <!-- Upload Icon -->
+              <i class="fa-solid fa-folder-open text-blue-600 text-4xl"></i>
+              <span
+                class="px-4 py-1 m-2 border border-blue-400 text-blue-600 rounded-md text-sm font-medium hover:bg-blue-50"
+              >
+                Browse files
+              </span>
+              <input
+                type="file"
+                class="hidden"
+                accept="application/pdf"
+                @change="handleFileUpload($event, doc.key)"
+              />
+            </label>
+          </div>
+        </div>
+
+        <!-- Step6 Bank statement source -->
+        <div v-if="step === 7" class="p-2">
+          <h2 class="font-semibold text-lg mb-4">Link Bank Statement</h2>
+
+          <v-select
+            v-model="statement"
+            :items="statementOptions"
+            label="Bank statement source"
+            placeholder="select bank statement source"
+            variant="outlined"
+            density="comfortable"
+          />
+
+          <!-- Only show if 'Upload pdf' is selected -->
+          <div v-if="statement === 'Upload pdf'" class="mt-4">
+            <div
+              v-for="doc in documents.filter((d) => d.key === 'bankStatement')"
+              :key="doc.key"
+              class="space-y-2"
+            >
+              <p class="font-medium">{{ doc.label }}</p>
+
+              <!-- File already uploaded -->
+              <div
+                v-if="doc.file"
+                class="flex items-center justify-between border rounded-lg p-3 shadow-sm"
+              >
+                <div class="flex items-center space-x-3">
+                  <i class="fa-solid fa-file-pdf text-red-600 text-3xl"></i>
+                  <div>
+                    <p class="text-sm font-medium">{{ doc.file.name }}</p>
+                    <p class="text-xs text-gray-500">{{ doc.file.size }}MB</p>
+                  </div>
+                </div>
+                <i
+                  class="fa-solid fa-circle-xmark text-gray-400 hover:text-red-500 cursor-pointer text-xl"
+                  @click="removeFile(doc.key)"
+                ></i>
+              </div>
+
+              <!-- No file uploaded -->
+              <label
+                v-else
+                class="flex flex-col items-center justify-center border-2 border-dashed border-blue-400 rounded-lg p-6 cursor-pointer hover:bg-blue-50 transition"
+              >
+                <i class="fa-solid fa-folder-open text-blue-600 text-4xl mb-2"></i>
+                <span
+                  class="px-4 py-1 border border-blue-600 text-blue-600 rounded-md text-sm font-medium hover:bg-blue-50"
+                >
+                  Browse files
+                </span>
+                <input
+                  type="file"
+                  class="hidden"
+                  accept="application/pdf"
+                  @change="handleFileUpload($event, doc.key)"
+                />
+              </label>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Footer -->
       <div class="mt-auto">
-        <v-btn block color="primary" size="large" class="rounded" @click="nextStep">
-          Continue
+        <v-btn
+          block
+          color="primary"
+          size="large"
+          class="rounded"
+          @click="step === 7 ? submitForm() : nextStep()"
+        >
+          {{ step === 7 ? 'Submit' : 'Continue' }}
         </v-btn>
         <p class="text-center text-xs text-gray-500 mt-2 font-semibold">Powered by Jupita</p>
       </div>
@@ -302,15 +413,49 @@ import { ref, watch, onBeforeUnmount } from 'vue'
 import MobileLayout from '@/layouts/full/MobileLayout.vue'
 
 const step = ref(1)
-const totalSteps = 6
+const totalSteps = 7
 
 const video = ref(null)
 const stream = ref(null)
 const preview = ref(null)
 const captured = ref(false)
 
+const statementOptions = ['Link with mono', 'Upload pdf', 'Link with MBS']
+const statement = ref(null)
+
+const documents = ref([
+  { key: 'employment', label: 'Employment Letter', file: null },
+  { key: 'payslip', label: 'Payslip', file: null },
+  { key: 'utility', label: 'Utility Bill', file: null },
+  { key: 'additional', label: 'Additional Document', file: null },
+  { key: 'bankStatement', label: 'Bank Statement', file: null }
+])
+
+const handleFileUpload = (event, key) => {
+  const file = event.target.files[0]
+  if (file) {
+    const sizeMB = (file.size / (1024 * 1024)).toFixed(1)
+    const doc = documents.value.find((d) => d.key === key)
+    if (doc) doc.file = { name: file.name, size: sizeMB }
+  }
+}
+
+const removeFile = (key) => {
+  const doc = documents.value.find((d) => d.key === key)
+  if (doc) doc.file = null
+}
+
+const employmentTypes = ['Full-time', 'Part-time', 'Contract', 'Self-employed']
+const companySectors = ['Finance', 'Technology', 'Education', 'Healthcare']
+const states = ['Lagos', 'Abuja', 'Kano', 'Oyo']
+const lgas = {
+  Lagos: ['Ikeja', 'Lekki', 'Surulere'],
+  Abuja: ['Gwagwalada', 'Kuje', 'Bwari'],
+  Kano: ['Nassarawa', 'Gwale', 'Dala'],
+  Oyo: ['Ibadan North', 'Ibadan South West']
+}
+
 const tenors = ['3 months', '6 months', '12 months']
-const states = ['Lagos', 'Abuja', 'Kano']
 
 const form = ref({
   loanAmount: '',
