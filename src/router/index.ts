@@ -63,11 +63,11 @@ const router = createRouter({
       name: 'credit-search',
       component: CreditSearch
     },
-    {
-      path: '/applications',
-      name: 'applications',
-      component: Applications
-    },
+    // {
+    //   path: '/applications',
+    //   name: 'applications',
+    //   component: Applications
+    // },
     {
       path: '/sitedown',
       name: 'sitedown',
