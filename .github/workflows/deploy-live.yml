@@ -24,6 +24,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+        # copy .env.live so build picks up correct values
+      - name: Use live env file
+        run: cp .env.live .env
+
       - name: Build project
         run: npm run build
 
