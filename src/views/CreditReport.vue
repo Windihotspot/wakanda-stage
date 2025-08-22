@@ -11,6 +11,7 @@ const authStore = useAuthStore()
 import moment from 'moment'
 import CreditReportExport from '@/components/CreditReportExport.vue'
 const hitRecord = route.params.hitRecord === 'true'
+console.log('hit record:', route.params.hitRecord)
 const tabs = [
   { key: 'first_central', label: 'First Central' },
   { key: 'credit_registry', label: 'Credit Registry' }
@@ -964,7 +965,6 @@ function getDotColor(status) {
           <!-- Export Button aligned to the right -->
           <div>
             <v-btn
-              @click="reportRef?.exportPDF()"
               no-uppercase
               size="small"
               class="normal-case p-4 bg-blue-600 hover:bg-blue-700 text-white text-none custom-btn"
@@ -972,6 +972,15 @@ function getDotColor(status) {
               <i class="fas fa-download mr-2"></i>
               Export PDF
             </v-btn>
+            <!-- <v-btn
+              @click="reportRef?.exportPDF()"
+              no-uppercase
+              size="small"
+              class="normal-case p-4 bg-blue-600 hover:bg-blue-700 text-white text-none custom-btn"
+            >
+              <i class="fas fa-download mr-2"></i>
+              Export PDF
+            </v-btn> -->
           </div>
         </div>
         <transition name="fade" mode="out-in">
@@ -2105,6 +2114,7 @@ function getDotColor(status) {
     <div class="hidden">
       <CreditReportExport
         :id-type="idType"
+        :hit-record="hitRecord"
         :business-data="businessData"
         :directors="directors"
         ref="reportRef"

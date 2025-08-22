@@ -78,8 +78,14 @@ const router = createRouter({
       name: 'loan-form',
       component: LoanForm
     },
+    // {
+    //   path: '/credit-report/:unique_key/:hitRecord?',
+    //   name: 'CreditReport',
+    //   component: () => import('@/views/CreditReport.vue'),
+    //   props: true
+    // },
     {
-      path: '/credit-report/:unique_key/:hitRecord?',
+      path: '/credit-export/:unique_key/:hitRecord?',
       name: 'CreditReport',
       component: () => import('@/views/CreditReport.vue'),
       props: true

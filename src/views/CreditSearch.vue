@@ -530,7 +530,7 @@ onMounted(() => {
               </td>
               <td class="py-3 px-6 text-center">
                 <span
-                  @click="goToReport(credit.unique_key, hitRecord)"
+                  @click="goToReport(credit.unique_key, credit.no_hit)"
                   class="bg-[#1f5aa3] text-white px-4 py-1 rounded hover:bg-blue-600 cursor-pointer"
                 >
                   View
