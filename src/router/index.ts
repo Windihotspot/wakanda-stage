@@ -12,7 +12,7 @@ import CreditReport from '@/views/CreditReport.vue'
 import SiteDown from '@/views/SiteDown.vue'
 import Applications from '@/views/Applications.vue'
 import LoanForm from '@/views/LoanForm.vue'
-
+import CreditReportExport from '../views/CreditReportExport.vue'
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -26,13 +26,11 @@ const router = createRouter({
       name: 'verified',
       component: VerifiedEmail
     },
-
     {
       path: '/dashboard',
       name: 'dashboard',
       component: DashboardView
     },
-
     {
       path: '/wallet',
       name: 'wallet',

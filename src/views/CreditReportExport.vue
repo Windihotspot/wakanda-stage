@@ -846,7 +846,6 @@ function getDotColor(status) {
 </script>
 
 <template>
-  <MainLayout>
     <div class="mt-4 p-2 mx-auto space-y-6">
         <!-- No hit record -->
       <div
@@ -1825,7 +1824,6 @@ function getDotColor(status) {
         </div>
       </div>
     </div>
-  </MainLayout>
 </template>
 
 <style scoped>
