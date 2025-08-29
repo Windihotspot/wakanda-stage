@@ -1,10 +1,15 @@
 <template>
-  <div class="max-w-2xl mx-auto p-6 bg-white shadow-lg rounded-lg">
+  <div
+    v-if="!showConfettiModal && !showErrorModal"
+    class="max-w-2xl mx-auto p-6 bg-white shadow-lg rounded-lg"
+  >
     <div class="flex justify-between items-center pb-2 m-1">
       <div>
         <h2 class="text-xl font-bold">Upload bank statement</h2>
         <p class="font-light mt-1">Upload your Bank statement pdf for analysis.</p>
       </div>
+      <!-- TEST BUTTON (remove in production) -->
+      <!-- <v-btn color="green" class="mt-4" @click="simulateSuccess"> 🔥 Simulate Success </v-btn> -->
 
       <div class="mb-4" @click="closeForm">
         <i class="fa-solid fa-close text-black text-3xl"></i>
@@ -99,56 +104,58 @@
         </v-btn>
       </div>
     </form>
+  </div>
 
-    <!-- ConfettiSuccessModal.vue -->
-    <div
-      v-if="showConfettiModal"
-      class="fixed inset-0 z-50 flex items-center justify-center w-full"
-    >
-      <div class="bg-white p-8 rounded-lg shadow-xl text-center relative">
-        <!-- Confetti canvas -->
-        <canvas
-          ref="confettiCanvas"
-          class="absolute top-0 left-0 w-full h-full pointer-events-none z-0"
-        ></canvas>
+  <!-- ConfettiSuccessModal.vue -->
+  <div v-if="showConfettiModal" class="fixed inset-0 z-50 flex items-center justify-center w-full">
+    <div class="bg-white p-8 rounded-lg shadow-xl text-center relative">
+      <!-- Confetti canvas -->
+      <canvas
+        ref="confettiCanvas"
+        class="absolute top-0 left-0 w-full h-full pointer-events-none z-0"
+      ></canvas>
 
-        <!-- Success content -->
-        <div class="relative z-10 items-center justify-center">
-          <h2 class="text-xl font-bold mb-2">Success!</h2>
-          <div class="mt-8">
-            <i class="fas fa-check-circle text-green-500 text-6xl mb-4"></i>
-          </div>
-
-          <p class="text-gray-600">Your bank statement has been added successfully.</p>
-
-          <v-btn color="#1f5aa3" variant="plain" @click="$emit('close')" class="custom-btn m-4">
-            Return Home
-          </v-btn>
+      <!-- Success content -->
+      <div class="relative z-10 items-center justify-center">
+        <div class="mt-8">
+          <i class="fas fa-check-circle text-green-500 text-6xl mb-4"></i>
         </div>
+
+        <p class="text-gray-600">Your bank statement has been added successfully.</p>
+
+        <v-btn color="#1f5aa3" variant="plain" @click="$emit('close')" class="custom-btn m-4">
+          Return Home
+        </v-btn>
       </div>
     </div>
-
-    <!-- Error Modal -->
-    <v-dialog v-model="showErrorModal" max-width="500px" persistent>
-      <template #default>
-        <div class="p-6 text-center relative bg-white rounded-lg shadow-xl">
-          <div class="text-red-500 text-6xl mb-4">
-            <v-icon size="64">mdi-alert-circle</v-icon>
-          </div>
-          <h2 class="text-xl font-bold mb-2">Upload Failed</h2>
-          <p class="text-gray-700">{{ errorMessage }}</p>
-          <v-btn color="red" variant="plain" class="mt-6 text-white custom-btn" @click="showErrorModal = false"> Close </v-btn>
-        </div>
-      </template>
-    </v-dialog>
   </div>
+
+  <!-- Error Modal -->
+  <v-dialog v-model="showErrorModal" max-width="500px" persistent>
+    <template #default>
+      <div class="p-6 text-center relative bg-white rounded-lg shadow-xl">
+        <div class="text-red-500 text-6xl mb-4">
+          <v-icon size="64">mdi-alert-circle</v-icon>
+        </div>
+        <h2 class="text-xl font-bold mb-2">Upload Failed</h2>
+        <p class="text-gray-700">{{ errorMessage }}</p>
+        <v-btn
+          color="red"
+          variant="plain"
+          class="mt-6 text-white custom-btn"
+           @click="() => { showErrorModal = false; closeForm() }"
+        >
+          Close
+        </v-btn>
+      </div>
+    </template>
+  </v-dialog>
 </template>
 
 <script setup>
-import { ElLoading, ElNotification } from 'element-plus'
+import { ElNotification } from 'element-plus'
 import { ref, computed, defineProps, onMounted, watch, nextTick } from 'vue'
 import axios from 'axios'
-import Swal from 'sweetalert2'
 const loading = ref(false)
 import { useAuthStore } from '@/stores/auth'
 const authStore = useAuthStore()
@@ -167,7 +174,6 @@ const confettiCanvas = ref(null)
 const showErrorModal = ref(false)
 const errorMessage = ref('')
 
-
 const selectedFile = ref(null)
 const filePassword = ref('')
 const fileInput = ref(null)
@@ -176,6 +182,15 @@ const selectedTypes = ref(null)
 const closeForm = () => {
   // Emit the close event to the parent component (if needed)
   emit('close')
+}
+
+const simulateSuccess = () => {
+  // pretend upload succeeded
+  loading.value = false
+  selectedFile.value = null
+  statementType.value = ''
+  filePassword.value = ''
+  showConfettiModal.value = true
 }
 
 const statementType = ref('')
@@ -244,8 +259,7 @@ const uploadFile = async () => {
     formData.append('password', filePassword.value)
   }
 
-  const API_URL = `${import.meta.env.VITE_API_BASE_URL}
-/api/${tenantId}/bank-statement-analyze`
+  const API_URL = `${import.meta.env.VITE_API_BASE_URL}/api/${tenantId}/bank-statement-analyze`
 
   console.log('➡️ Uploading file...')
   for (const [key, value] of formData.entries()) {
@@ -292,16 +306,37 @@ const uploadFile = async () => {
     filePassword.value = ''
     statementType.value = ''
   } catch (error) {
-    console.log('❌ Upload error:', error)
-    
+    // Reset input values
+    selectedFile.value = null
+    filePassword.value = ''
+    statementType.value = ''
+    console.log('❌ Upload error:', error.response?.data?.data?.error)
+
+    errorMessage.value = 'An error occurred during upload.' // <-- update ref, not new let
+
+    const rawError = error.response?.data?.data?.error
+    if (typeof rawError === 'string') {
+      try {
+        // Find the JSON part after the colon
+        const jsonMatch = rawError.match(/\{.*\}/)
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0])
+          errorMessage.value = parsed.message || errorMessage.value
+        } else {
+          errorMessage.value = rawError // fallback to whole string
+        }
+      } catch (e) {
+        errorMessage.value = rawError // fallback if parsing fails
+      }
+    }
+
     ElNotification({
       title: 'Upload Failed',
-      message: error.response?.data?.message || 'An error occurred during upload.',
+      message: errorMessage.value,
       type: 'error',
-      duration: 5000
+      showClose: true,
     })
     showErrorModal.value = true
-    closeForm()
   } finally {
     loading.value = false
   }
@@ -309,36 +344,40 @@ const uploadFile = async () => {
 
 watch(showConfettiModal, async (newVal) => {
   if (newVal) {
-    await nextTick() // Wait for dialog to render
+    await nextTick()
+
     const myConfetti = confetti.create(confettiCanvas.value, {
-      resize: true,
-      useWorker: true
+      resize: true
     })
 
-    const duration = 2 * 1000
-    const end = Date.now() + duration
     const colors = ['#1f5aa3', '#00b894', '#ffeaa7', '#fab1a0']
+    const duration = 3 * 1000 // 5 seconds
+    const end = Date.now() + duration
 
-    ;(function frame() {
+    function frame() {
+      if (Date.now() > end) return // stop spawning after 5s
+
       myConfetti({
-        particleCount: 4,
-        angle: 60,
-        spread: 55,
-        origin: { x: 0 },
-        colors
-      })
-      myConfetti({
-        particleCount: 4,
-        angle: 120,
-        spread: 55,
-        origin: { x: 1 },
-        colors
+        particleCount: 8,
+        spread: 70,
+        origin: { x: Math.random(), y: 0 },
+        colors,
+        gravity: 1, // normal fall
+        ticks: 200 // particles disappear fairly quickly
       })
 
-      if (Date.now() < end) {
-        requestAnimationFrame(frame)
-      }
-    })()
+      requestAnimationFrame(frame)
+    }
+
+    // start rain
+    frame()
+
+    // clear canvas after 5s (remove all particles)
+    setTimeout(() => {
+      confettiCanvas.value
+        .getContext('2d')
+        .clearRect(0, 0, confettiCanvas.value.width, confettiCanvas.value.height)
+    }, duration + 1000) // small buffer to finish last particles
   }
 })
 

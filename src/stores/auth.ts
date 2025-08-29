@@ -20,7 +20,7 @@ export const useAuthStore = defineStore('auth', {
   }),
   actions: {
     setAuthData(data: any) {
-      console.log(localStorage.getItem('token'))
+      // console.log(localStorage.getItem('token'))
 
       this.id = data.user?.id || null
       this.token = data.token || null

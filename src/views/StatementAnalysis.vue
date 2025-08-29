@@ -27,11 +27,11 @@
         <!-- Centered Content -->
         <img src="../assets/Error Fall Down.png" alt="Failed" class="mx-auto h-48" />
         <p class="mt-4">
-          There was an error during file processing. Jupita will work promptly to resolve this
-          issue. <br />
+          <strong>{{ failedReason }}</strong> <br />
           If you have any further questions, please don't hesitate to
-          <a href="mailto:hello@getjupita.com" class="text-[#1f5aa3]">Contact Us..</a>
+           <a href="mailto:hello@getjupita.com" class="text-[#1f5aa3]">Contact Us..</a>
         </p>
+       
       </div>
 
       <template v-else>
@@ -823,6 +823,7 @@ const authStore = useAuthStore()
 const result = ref(null)
 const loading = ref(true)
 const error = ref(null)
+const failedReason = ref('')
 
 const fileName = ref('')
 const clientName = ref('')
@@ -944,8 +945,7 @@ const fetchAnalysisResult = async (analysisId) => {
     : computed(() => (authStore.user?.business_name ? authStore.user.id : authStore.user.tenant_id))
         ?.value
 
-  const apiUrl = `${import.meta.env.VITE_API_BASE_URL}
-/api/${tenantId}/get-analysis-result?analysis_id=${analysisId}`
+  const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/api/${tenantId}/get-analysis-result?analysis_id=${analysisId}`
   loading.value = true
 
   try {
@@ -960,6 +960,8 @@ const fetchAnalysisResult = async (analysisId) => {
 
     // Extract needed data
     const analysis = response.data?.data?.analysis_result?.analysis_result
+    failedReason.value = analysis.failedReason
+    console.log("failed reason:", failedReason.value)
     fileName.value = analysis?.name || 'N/A'
     clientName.value = analysis?.clientFullName || 'N/A'
     accountId.value = analysis?.accountId || 'N/A'

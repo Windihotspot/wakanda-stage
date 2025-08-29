@@ -344,8 +344,7 @@ const fundWallet = async () => {
     return
   }
 
-  const API_URL = `${import.meta.env.VITE_API_BASE_URL}/api/
-${tenantId}/initialize-payment`
+  const API_URL = `${import.meta.env.VITE_API_BASE_URL}/api/${tenantId}/initialize-payment`
   console.log('fund wallet formatted amount:', formattedAmount.value)
   console.log('fund wallet amount:', form.amount)
 
